@@ -1,0 +1,19 @@
+[project]
+name = "team-minigolf"
+version = "0.1.0"
+description = "Minigolf WebApp – Spielverwaltung, Live-Scoring & Statistiken"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"

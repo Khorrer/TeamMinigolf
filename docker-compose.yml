@@ -1,0 +1,93 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+    container_name: minigolf-web
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_PORT=3306
+    volumes:
+      - static_data:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  db:
+    image: mariadb:11
+    container_name: minigolf-db
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=128M
+
+  backup:
+    image: mariadb:11
+    container_name: minigolf-backup
+    restart: "no"
+    env_file: .env
+    environment:
+      - DATABASE_HOST=db
+      - BACKUP_RETAIN_DAYS=${BACKUP_RETAIN_DAYS:-30}
+    volumes:
+      - ./scripts/backup.sh:/backup.sh:ro
+      - backup_data:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/backup.sh"]
+    profiles:
+      - backup
+
+  # --- Dev-Only Tools (activate with: docker compose --profile dev up) ---
+  adminer:
+    image: adminer:latest
+    container_name: minigolf-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - dev
+
+  # --- Cloudflare Tunnel (activate with: docker compose --profile tunnel up) ---
+  # Uncomment and configure when ready:
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: minigolf-tunnel
+  #   restart: unless-stopped
+  #   command: tunnel run
+  #   environment:
+  #     - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+  #   depends_on:
+  #     web:
+  #       condition: service_healthy
+  #   profiles:
+  #     - tunnel
+
+volumes:
+  db_data:
+  static_data:
+  backup_data:

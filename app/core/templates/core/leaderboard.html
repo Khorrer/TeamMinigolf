@@ -1,0 +1,46 @@
+{% extends "core/base.html" %}
+{% block title %}Leaderboard – #TeamMinigolf{% endblock %}
+{% block content %}
+<h2><i class="bi bi-trophy text-warning"></i> Leaderboard</h2>
+
+<form method="get" class="mb-4">
+  <select name="season" class="form-select form-select-sm" style="width:auto;display:inline-block"
+    onchange="this.form.submit()">
+    {% for s in seasons %}
+    <option value="{{ s }}" {% if current_season==s|stringformat:"d" %}selected{% endif %}>Saison {{ s }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<table class="table table-sm">
+  <thead class="table-warning">
+    <tr>
+      <th>#</th>
+      <th>Spieler</th>
+      <th>Runden</th>
+      <th>⌀ Schläge/Bahn</th>
+      <th>Σ Schläge</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for entry in leaderboard %}
+    <tr {% if forloop.first %}class="table-success fw-bold" {% endif %}>
+      <td>
+        {% if forloop.counter == 1 %}<i class="bi bi-trophy-fill text-warning"></i>
+        {% elif forloop.counter == 2 %}<i class="bi bi-trophy-fill text-secondary"></i>
+        {% elif forloop.counter == 3 %}<i class="bi bi-trophy-fill" style="color:#cd7f32"></i>
+        {% else %}{{ forloop.counter }}{% endif %}
+      </td>
+      <td>{{ entry.player__name }}</td>
+      <td>{{ entry.total_rounds }}</td>
+      <td>{{ entry.avg_strokes|floatformat:2 }}</td>
+      <td>{{ entry.total_strokes }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="5" class="text-muted">Keine Daten für diese Saison.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

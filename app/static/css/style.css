@@ -1,0 +1,34 @@
+/* #TeamMinigolf – Custom Styles */
+
+.scoring-table input.score-input {
+  padding: 2px 4px;
+  font-size: 0.9rem;
+}
+
+.scoring-table input.is-valid {
+  border-color: #198754;
+  background-color: #d1e7dd;
+}
+
+.scoring-table input.is-invalid {
+  border-color: #dc3545;
+  background-color: #f8d7da;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+/* Mobile tweaks */
+@media (max-width: 576px) {
+  .scoring-table input.score-input {
+    width: 42px !important;
+    font-size: 0.8rem;
+  }
+
+  .scoring-table th,
+  .scoring-table td {
+    padding: 0.25rem;
+    font-size: 0.8rem;
+  }
+}
