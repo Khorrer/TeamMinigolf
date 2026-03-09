@@ -7,7 +7,7 @@
   <select name="season" class="form-select form-select-sm" style="width:auto;display:inline-block"
     onchange="this.form.submit()">
     {% for s in seasons %}
-    <option value="{{ s }}" {% if current_season==s|stringformat:"d" %}selected{% endif %}>Saison {{ s }}</option>
+    <option value="{{ s }}" {% if current_season|add:"0" == s %}selected{% endif %}>Saison {{ s }}</option>
     {% endfor %}
   </select>
 </form>

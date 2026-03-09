@@ -20,7 +20,7 @@
     onchange="if(this.value) location='?season='+this.value; else location='{% url 'session_list' %}'">
     <option value="">Saison…</option>
     {% for s in seasons %}
-    <option value="{{ s }}" {% if current_season==s|stringformat:"d" %}selected{% endif %}>{{ s }}</option>
+    <option value="{{ s }}" {% if current_season|add:"0" == s %}selected{% endif %}>{{ s }}</option>
     {% endfor %}
   </select>
   {% endif %}
