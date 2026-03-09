@@ -1,0 +1,28 @@
+{% extends "core/base.html" %}
+{% block title %}{{ course.name }} – #TeamMinigolf{% endblock %}
+{% block content %}
+<h2>{{ course.name }}</h2>
+{% if course.location %}<p class="text-muted">{{ course.location }}</p>{% endif %}
+
+<h5>Bahnen ({{ course.holes_count }})</h5>
+<table class="table table-sm">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Par</th>
+      <th>⌀ Schläge</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for h in holes %}
+    <tr>
+      <td>{{ h.hole_number }}</td>
+      <td>{% if h.par %}{{ h.par }}{% else %}–{% endif %}</td>
+      <td>{% if h.avg_strokes %}{{ h.avg_strokes|floatformat:1 }}{% else %}–{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<a href="{% url 'course_edit' course.pk %}" class="btn btn-outline-secondary btn-sm">Bearbeiten</a>
+<a href="{% url 'course_list' %}" class="btn btn-outline-secondary btn-sm">Zurück</a>
+{% endblock %}

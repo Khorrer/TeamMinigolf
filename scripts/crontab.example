@@ -1,0 +1,5 @@
+# Crontab entry for daily backup (install on the host)
+# Run: crontab -e  → paste the line below
+#
+# Daily backup at 03:00 + push to Raspberry Pi
+0 3 * * * cd /path/to/TeamMinigolf && docker compose --profile backup run --rm backup >> /var/log/minigolf-backup.log 2>&1
