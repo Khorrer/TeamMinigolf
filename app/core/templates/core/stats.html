@@ -9,7 +9,7 @@
     <select name="season" class="form-select form-select-sm">
       <option value="">Alle Saisons</option>
       {% for s in seasons %}
-      <option value="{{ s }}" {% if current_season==s|stringformat:"d" %}selected{% endif %}>{{ s }}</option>
+      <option value="{{ s }}" {% if current_season|add:"0" == s %}selected{% endif %}>{{ s }}</option>
       {% endfor %}
     </select>
   </div>
@@ -17,7 +17,7 @@
     <select name="course" class="form-select form-select-sm">
       <option value="">Alle Anlagen</option>
       {% for c in courses %}
-      <option value="{{ c.pk }}" {% if current_course==c.pk|stringformat:"d" %}selected{% endif %}>{{ c.name }}</option>
+      <option value="{{ c.pk }}" {% if current_season|add:"0" == c.pk %}selected{% endif %}>{{ c.name }}</option>
       {% endfor %}
     </select>
   </div>
