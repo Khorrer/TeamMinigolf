@@ -6,6 +6,9 @@ from django.db.models import Avg, Count, Min, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django.contrib import messages
+from .models import Course
+from django.db import models 
 
 from .forms import CourseForm, PlayerForm, SessionCreateForm
 from .models import AuditLog, Course, Hole, Player, Score, Session, SessionPlayer
@@ -77,7 +80,6 @@ def course_list(request):
     courses = Course.objects.annotate(session_count=Count("sessions"))
     return render(request, "core/course_list.html", {"courses": courses})
 
-
 @login_required
 def course_create(request):
     form = CourseForm(request.POST or None)
@@ -96,13 +98,37 @@ def course_detail(request, pk):
 
 @login_required
 def course_edit(request, pk):
-    course = get_object_or_404(Course, pk=pk)
-    form = CourseForm(request.POST or None, instance=course)
-    if form.is_valid():
-        form.save()
-        return redirect("course_detail", pk=pk)
-    return render(request, "core/course_form.html", {"form": form, "title": "Anlage bearbeiten"})
+    course = get_object_or_404(Course.objects.prefetch_related("holes"), pk=pk)
+    # Hole alle existierenden Bahnen oder erstelle sie, falls nötig
+    holes = course.holes.annotate(avg_strokes=Avg("scores__strokes"))
+    
+    if request.method == "POST":
+        for hole in holes:
+            par_value = request.POST.get(f'par_{hole.hole_number}')
+            if par_value:
+                hole.par = par_value
+                hole.save()
+        return redirect('course_list')
 
+    return render(request, 'core/course_pars.html', {
+        'course': course,
+        'holes': holes
+    })
+
+@login_required
+def course_delete(request, pk):
+    course = get_object_or_404(Course.objects.prefetch_related("holes"), pk=pk)
+    
+    if request.method == "POST":
+        try:
+            course.delete()
+            messages.success(request, f"Anlage '{course.name}' wurde erfolgreich gelöscht.")
+            return redirect('course_list')
+        except models.ProtectedError:
+            messages.error(request, f"Löschen nicht möglich: Es existieren noch Spielrunden für '{course.name}'.")
+            return redirect('course_list')
+
+    return render(request, 'core/course_confirm_delete.html', {'course': course})
 
 # ---------------------------------------------------------------------------
 # Sessions
