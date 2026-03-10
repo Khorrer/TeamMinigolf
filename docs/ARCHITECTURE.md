@@ -1,86 +1,97 @@
+Hier ist die aktualisierte `architektur.md`. Ich habe das Datenmodell um die technischen Tabellendetails aus deinem `inspectdb`-Auszug ergänzt und die Beziehungen präzisiert.
+
+---
+
 # Architektur – #TeamMinigolf
 
 ## Überblick
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Browser    │────▶│  Django/     │────▶│  MariaDB 11  │
-│  (Bootstrap) │◀────│  Gunicorn    │◀────│  (InnoDB)    │
-└──────────────┘     └──────────────┘     └──────────────┘
-       :8000              web                   db
+┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+│    Browser   │────▶│  Django/      │────▶│  MariaDB 11   │
+│  (Bootstrap) │◀────│  Gunicorn     │◀────│  (InnoDB)    │
+└──────────────┘      └──────────────┘      └──────────────┘
+       :8000              web                    db
+
 ```
 
 ## Stack-Entscheidungen
 
 | Komponente | Wahl | Begründung |
-|---|---|---|
-| Framework | **Django 5** | Batteries-included (Auth, Admin, ORM, Migrations), ideal für Server-rendered UI mit kleinem Team |
-| DB | **MariaDB 11** | Stabile, performante relationale DB mit InnoDB; bewährt für Webapps |
-| UI | **Server-rendered (Django Templates + Bootstrap 5)** | Einfach, schnell, kein Build-Step nötig; HTMX-ready bei Bedarf |
-| Deployment | **Docker Compose** | Einfaches Single-Server-Setup, reproduzierbar |
-| WSGI Server | **Gunicorn** | Standard-Produktions-WSGI-Server für Django |
+| --- | --- | --- |
+| Framework | **Django 5** | Batteries-included (Auth, Admin, ORM, Migrations) |
+| DB | **MariaDB 11** | Stabile, performante relationale DB mit InnoDB |
+| UI | **Server-rendered** | Django Templates + Bootstrap 5; Fokus auf Funktionalität |
+| Deployment | **Docker Compose** | Reproduzierbare Umgebung für App, DB und Backups |
 
-## Datenmodell
+## Datenmodell (ER-Diagramm)
 
 ```
-players (1)──(n) session_players (n)──(1) sessions
-                                           │
-courses (1)──(n) holes                     │
-   │                │                      │
-   └──(1)──(n) sessions (1)──(n) scores ◀──┘
-                                    │
-                          players ◀─┘
-                          holes   ◀─┘
+CorePlayer (1)──(n) CoreSessionPlayer (n)──(1) CoreSession
+                                                  │
+CoreCourse (1)──(n) CoreHole                      │
+   │               │                              │
+   └──(1)──(n) CoreSession (1)──(n) CoreScore ◀───┘
+                                     │
+                          CorePlayer ◀─┘
+                          CoreHole   ◀─┘
 
-audit_log ← tracks score changes
+CoreAuditLog ← tracks changes (Model-based)
+
 ```
 
-### Modelle
+### Datenbank-Tabellen (Schema-Details)
 
-- **Player**: Spieler (unabhängig von Django-User/Auth)
-- **Course**: Minigolf-Anlage mit Bahnanzahl
-- **Hole**: Einzelne Bahn einer Anlage (auto-created bei Course-Erstellung)
-- **Session**: Spieltag (live / completed), verknüpft Spieler mit Anlage
-- **SessionPlayer**: M2M-Zwischentabelle
-- **Score**: Schlagzahl pro Spieler/Bahn/Session (unique_together)
-- **AuditLog**: JSON-basierte Änderungshistorie
+Basierend auf der aktuellen MariaDB-Struktur:
 
-### Wichtige Constraints
+| Tabelle | Primärschlüssel | Wichtige Felder | Beschreibung |
+| --- | --- | --- | --- |
+| `core_player` | `id` (BigInt) | `name` (Unique), `active` (Bool) | Registrierte Spieler |
+| `core_course` | `id` (BigInt) | `name`, `location`, `holes_count` | Minigolf-Anlagen |
+| `core_hole` | `id` (BigInt) | `hole_number`, `par`, `course_id` | Einzelbahnen (Unique: Course + Nr) |
+| `core_session` | `id` (BigInt) | `played_at`, `status`, `season` | Ein Spieltermin/Runde |
+| `core_sessionplayer` | `id` (BigInt) | `session_id`, `player_id` | Teilnehmer einer Session |
+| `core_score` | `id` (BigInt) | `strokes`, `session_id`, `player_id`, `hole_id` | Die Einzelergebnisse (Unique: Session+Player+Hole) |
+| `core_auditlog` | `id` (BigInt) | `action`, `model_name`, `details` (JSON) | Änderungshistorie |
 
-- `Score.unique_together = (session, player, hole)` → maximal ein Eintrag pro Kombination
-- `Hole.unique_together = (course, hole_number)` → keine doppelten Bahnnummern
-- `SessionPlayer.unique_together = (session, player)` → Spieler nur einmal pro Session
-- `Score.strokes`: 1–10 (Validator)
-- `Course.holes_count`: 1–36 (Validator)
-- `Course → Session`: PROTECT (keine Anlage löschen, solange Spieltage existieren)
-- `Player → Score/SessionPlayer`: PROTECT (kein Spieler löschen mit bestehenden Daten)
+### Wichtige Constraints & Logik
+
+* **Unique Constraints**:
+* `core_hole`: `unique_together = (course, hole_number)` – Verhindert doppelte Bahnnummern pro Platz.
+* `core_score`: `unique_together = (session, player, hole)` – Garantiert, dass ein Spieler pro Bahn und Runde nur ein Ergebnis hat.
+* `core_sessionplayer`: `unique_together = (session, player)` – Spieler können nicht doppelt in eine Runde eingetragen werden.
+
+
+* **Datenintegrität**:
+* Alle Fremdschlüssel (`ForeignKey`) nutzen im produktiven Modell idealerweise `on_delete=models.PROTECT`, um das versehentliche Löschen von Kursen oder Spielern mit bestehenden Historien zu verhindern.
+
+
+* **Audit-Log**:
+* Erfasst `action` (Create/Update/Delete) und speichert die Änderungen im `details` JSON-Feld.
+
+
 
 ## Request-Flow
 
-1. Alle Routen (außer `/health/`) erfordern Login (`@login_required`)
-2. Django CSRF-Protection auf allen POST-Formularen und AJAX-Calls
-3. Scoring-AJAX: `POST /sessions/<id>/score/` mit JSON-Body, CSRF-Token im Header
-4. Gunicorn (2 Workers) → ausreichend für ~20 gleichzeitige User
-
-## Security
-
-- `SECRET_KEY` aus Environment, nicht im Code
-- Produktionsmodus: `Secure`-Cookies, `X-Frame-Options: DENY`, `HSTS`-ready
-- SQL-Injection: ausgeschlossen durch Django ORM
-- XSS: Django Template Auto-Escaping
-- CSRF: Django Middleware + Token in AJAX-Calls
+1. Alle Routen (außer `/health/`) erfordern Login (`@login_required`).
+2. Statische Dateien werden über `/static/` ausgeliefert (im Dev-Modus via `django.conf.urls.static`).
+3. Scoring-Eingabe erfolgt über ein zentrales Formular oder AJAX-Endpunkte innerhalb einer Session.
 
 ## Backup-Strategie
 
 ```
-┌────────────┐   dump    ┌────────────┐   rsync   ┌────────────┐
+┌────────────┐    dump    ┌────────────┐    rsync    ┌────────────┐
 │  MariaDB   │ ────────▶ │  Backup    │ ────────▶ │ Raspberry  │
-│  Container │           │  Volume    │           │    Pi      │
+│  Container │           │  Volume    │           │     Pi     │
 └────────────┘           └────────────┘           └────────────┘
-     db                    backup_data              Remote
+      db                   backup_data                Remote
+
 ```
 
-- **Trigger**: Cronjob auf dem Host (täglich 03:00)
-- **Format**: `mariadb-dump` → gzip
-- **Rotation**: `BACKUP_RETAIN_DAYS` (default: 30 Tage)
-- **Remote**: Push via `rsync` zum Raspberry Pi (SSH-Keys erforderlich)
+* **Container**: Ein dedizierter `backup`-Service führt täglich `mariadb-dump` aus.
+* **Volumes**: `db_data` (Persistenz), `static_data` (Gesammelte Assets), `backup_data` (Dumps).
+* **Rotation**: 30 Tage Vorhaltung auf dem Host-System.
+
+---
+
+Soll ich dir noch ein spezielles SQL-Statement generieren, um die Tabellengrößen oder die aktuelle Belegung deiner Datenbank direkt im Terminal abzufragen?
