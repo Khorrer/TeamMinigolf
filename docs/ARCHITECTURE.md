@@ -40,19 +40,70 @@ CoreAuditLog ← tracks changes (Model-based)
 
 ```
 
-### Datenbank-Tabellen (Schema-Details)
+### ER-Modell (Mermaid Syntax)
 
-Basierend auf der aktuellen MariaDB-Struktur:
+Kopiere diesen Block einfach in deine Markdown-Datei. Viele Editoren (oder Browser-Extensions) rendern daraus sofort ein Diagramm.
 
-| Tabelle | Primärschlüssel | Wichtige Felder | Beschreibung |
-| --- | --- | --- | --- |
-| `core_player` | `id` (BigInt) | `name` (Unique), `active` (Bool) | Registrierte Spieler |
-| `core_course` | `id` (BigInt) | `name`, `location`, `holes_count` | Minigolf-Anlagen |
-| `core_hole` | `id` (BigInt) | `hole_number`, `par`, `course_id` | Einzelbahnen (Unique: Course + Nr) |
-| `core_session` | `id` (BigInt) | `played_at`, `status`, `season` | Ein Spieltermin/Runde |
-| `core_sessionplayer` | `id` (BigInt) | `session_id`, `player_id` | Teilnehmer einer Session |
-| `core_score` | `id` (BigInt) | `strokes`, `session_id`, `player_id`, `hole_id` | Die Einzelergebnisse (Unique: Session+Player+Hole) |
-| `core_auditlog` | `id` (BigInt) | `action`, `model_name`, `details` (JSON) | Änderungshistorie |
+```mermaid
+erDiagram
+    CORE_PLAYER ||--o{ CORE_SCORE : "erzielt"
+    CORE_PLAYER ||--o{ CORE_SESSIONPLAYER : "nimmt teil"
+    CORE_SESSION ||--o{ CORE_SESSIONPLAYER : "hat"
+    CORE_SESSION ||--o{ CORE_SCORE : "beinhaltet"
+    CORE_COURSE ||--o{ CORE_HOLE : "besitzt"
+    CORE_COURSE ||--o{ CORE_SESSION : "findet statt auf"
+    CORE_HOLE ||--o{ CORE_SCORE : "wird gewertet in"
+    AUTH_USER ||--o{ CORE_SESSION : "erstellt von"
+    AUTH_USER ||--o{ CORE_AUDITLOG : "verursacht"
+
+    CORE_PLAYER {
+        bigint id PK
+        string name "Unique"
+        bool active
+        datetime created_at
+    }
+
+    CORE_SESSION {
+        bigint id PK
+        date played_at
+        int season
+        string status
+        string notes
+        bigint course_id FK
+        bigint created_by_id FK
+    }
+
+    CORE_COURSE {
+        bigint id PK
+        string name
+        string location
+        int holes_count
+    }
+
+    CORE_HOLE {
+        bigint id PK
+        int hole_number
+        int par
+        bigint course_id FK
+    }
+
+    CORE_SCORE {
+        bigint id PK
+        int strokes
+        bigint player_id FK
+        bigint hole_id FK
+        bigint session_id FK
+    }
+
+    CORE_AUDITLOG {
+        bigint id PK
+        string action
+        string model_name
+        json details
+        datetime created_at
+    }
+
+```
 
 ### Wichtige Constraints & Logik
 
