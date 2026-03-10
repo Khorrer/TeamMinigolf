@@ -1,0 +1,29 @@
+{% extends "core/base.html" %}
+
+{% block title %}Anlage löschen – #TeamMinigolf{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Achtung: Anlage löschen</h4>
+                </div>
+                <div class="card-body">
+                    <p>Bist du sicher, dass du die Anlage <strong>{{ course.name }}</strong> unwiderruflich löschen möchtest?</p>
+                    <p class="text-muted small">Hinweis: Dies ist nur möglich, wenn noch keine Spiele auf dieser Anlage registriert wurden.</p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'course_list' %}" class="btn btn-outline-secondary">Abbrechen</a>
+                            <button type="submit" class="btn btn-danger">Ja, endgültig löschen</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

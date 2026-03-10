@@ -19,6 +19,9 @@
         </p>
         <a href="{% url 'course_detail' c.pk %}" class="btn btn-outline-success btn-sm">Details</a>
         <a href="{% url 'course_edit' c.pk %}" class="btn btn-outline-secondary btn-sm">Bearbeiten</a>
+        <a href="{% url 'course_delete' c.pk %}" class="btn btn-sm btn-outline-danger" title="Löschen">
+          <i class="bi bi-trash"></i>
+        </a>
       </div>
     </div>
   </div>
