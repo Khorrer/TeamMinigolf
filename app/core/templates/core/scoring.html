@@ -10,20 +10,24 @@
 </div>
 
 <div class="card mb-4 border-success shadow-sm" id="caddie-bot">
-  <div class="card-header bg-success text-white">
-    <i class="bi bi-robot"></i> Caddie Bot (Schnelleingabe)
+  <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-robot"></i> Caddie Bot</span>
   </div>
   <div class="card-body text-center">
-    <h5 id="bot-question" class="mb-3">Lade Spieler...</h5>
-    <div id="bot-buttons" class="d-flex justify-content-center flex-wrap gap-2" style="display: none;">
-      <button type="button" class="btn btn-outline-success bot-score-btn fw-bold" style="width: 50px; font-size: 1.2rem;" data-score="1">1</button>
-      <button type="button" class="btn btn-outline-success bot-score-btn fw-bold" style="width: 50px; font-size: 1.2rem;" data-score="2">2</button>
-      <button type="button" class="btn btn-outline-success bot-score-btn fw-bold" style="width: 50px; font-size: 1.2rem;" data-score="3">3</button>
-      <button type="button" class="btn btn-outline-success bot-score-btn fw-bold" style="width: 50px; font-size: 1.2rem;" data-score="4">4</button>
-      <button type="button" class="btn btn-outline-success bot-score-btn fw-bold" style="width: 50px; font-size: 1.2rem;" data-score="5">5</button>
-      <button type="button" class="btn btn-outline-success bot-score-btn fw-bold" style="width: 50px; font-size: 1.2rem;" data-score="6">6</button>
-      <button type="button" class="btn btn-outline-success bot-score-btn fw-bold" style="width: 50px; font-size: 1.2rem;" data-score="7">7</button>
+    <h5 id="bot-question" class="mb-3 text-dark">Lade Spieler...</h5>
+    
+    <div id="bot-buttons" class="d-flex justify-content-center flex-wrap gap-2 mb-2">
+      {% for i in "1234567" %}
+      <button type="button" class="btn btn-outline-success bot-score-btn fw-bold" 
+              style="width: 48px; height: 48px; font-size: 1.1rem;" data-score="{{ i }}">{{ i }}</button>
+      {% endfor %}
+      
+      <button type="button" class="btn btn-danger bot-score-btn fw-bold px-3" 
+              style="height: 48px; font-size: 0.9rem;" data-score="8">
+        <i class="bi bi-x-circle"></i> Nicht geschafft!
+      </button>
     </div>
+    
     <div id="bot-done-msg" class="text-success mt-2 d-none">
       <strong><i class="bi bi-check-circle-fill"></i> Alle Schläge sind erfasst!</strong>
     </div>

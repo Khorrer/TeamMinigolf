@@ -1,4 +1,5 @@
 import json
+import random
 from datetime import date
 
 from django.contrib.auth.decorators import login_required
@@ -203,8 +204,10 @@ def session_create(request):
             session = form.save(commit=False)
             session.created_by = request.user
             session.save()
-            for player in form.cleaned_data["players"]:
-                SessionPlayer.objects.create(session=session, player=player)
+            selected_players = form.cleaned_data["players"]
+            random_players = selected_players.order_by('?') 
+            for player in random_players:
+                SessionPlayer.objects.create(session=session, player=player)            
             return redirect("scoring", pk=session.pk)
     else:
         form = SessionCreateForm(initial={
@@ -365,7 +368,7 @@ def scoring(request, pk):
         pk=pk,
     )
     holes = session.course.holes.order_by("hole_number")
-    players = session.players.all()
+    players = session.players.all().order_by('sessionplayer__id')
     totalPar = sum(h.par for h in holes)
     existing_scores = {
         (s.player_id, s.hole_id): s.strokes
