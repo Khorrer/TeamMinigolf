@@ -10,6 +10,9 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from .models import Course
 from django.db import models 
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
+from django.contrib.auth.forms import UserCreationForm
 
 from .forms import AIScoreImportForm, CourseForm, PlayerForm, SessionCreateForm
 from .models import AuditLog, Course, Hole, Player, Score, Session, SessionPlayer
@@ -54,6 +57,27 @@ Rules:
 # ---------------------------------------------------------------------------
 def health_check(request):
     return HttpResponse("ok")
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+class BootstrapSignUpForm(UserCreationForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.update({'class': 'form-control'})
+
+def signup(request):
+    if request.method == 'POST':
+        form = BootstrapSignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('session_list') # Leitet zur Übersicht weiter
+    else:
+        form = BootstrapSignUpForm()
+    return render(request, 'core/signup.html', {'form': form})
 
 
 # ---------------------------------------------------------------------------
