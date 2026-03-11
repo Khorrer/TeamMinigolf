@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from core.models import Course, Player, Session, SessionPlayer
+from core.models import Course, Player, Score, Session, SessionPlayer
 
 
 class AuthTest(TestCase):
@@ -90,3 +90,59 @@ class ScoringTest(TestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 400)
+
+
+class AIScoreImportTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("testuser", password="testpass123")
+        self.client.login(username="testuser", password="testpass123")
+
+        self.course = Course.objects.create(name="Sonnenpark", holes_count=18)
+        self.player_1 = Player.objects.create(name="Alice")
+        self.player_2 = Player.objects.create(name="Bob")
+
+    def test_page_loads(self):
+        response = self.client.get(reverse("ai_import"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI Score Import")
+
+    def test_import_creates_completed_session_and_scores(self):
+        payload = {
+            "course": "Sonnenpark",
+            "date": "2026-03-10",
+            "players": [
+                {"name": "Alice", "scores": [2] * 18},
+                {"name": "Bob", "scores": [3] * 18},
+            ],
+        }
+
+        response = self.client.post(
+            reverse("ai_import"),
+            {"chatgpt_output": json.dumps(payload)},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        session = Session.objects.get(course=self.course, played_at="2026-03-10")
+        self.assertEqual(session.status, Session.Status.COMPLETED)
+        self.assertEqual(session.players.count(), 2)
+        self.assertEqual(Score.objects.filter(session=session).count(), 36)
+
+    def test_import_rejects_unknown_player(self):
+        payload = {
+            "course": "Sonnenpark",
+            "date": "2026-03-10",
+            "players": [
+                {"name": "Alice", "scores": [2] * 18},
+                {"name": "NotExisting", "scores": [3] * 18},
+            ],
+        }
+
+        response = self.client.post(
+            reverse("ai_import"),
+            {"chatgpt_output": json.dumps(payload)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Players do not exist")
+        self.assertEqual(Session.objects.count(), 0)
