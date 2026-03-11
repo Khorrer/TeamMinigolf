@@ -115,21 +115,6 @@ def course_edit(request, pk):
         'holes': holes
     })
 
-@login_required
-def course_delete(request, pk):
-    course = get_object_or_404(Course.objects.prefetch_related("holes"), pk=pk)
-    
-    if request.method == "POST":
-        try:
-            course.delete()
-            messages.success(request, f"Anlage '{course.name}' wurde erfolgreich gelöscht.")
-            return redirect('course_list')
-        except models.ProtectedError:
-            messages.error(request, f"Löschen nicht möglich: Es existieren noch Spielrunden für '{course.name}'.")
-            return redirect('course_list')
-
-    return render(request, 'core/course_confirm_delete.html', {'course': course})
-
 # ---------------------------------------------------------------------------
 # Sessions
 # ---------------------------------------------------------------------------
