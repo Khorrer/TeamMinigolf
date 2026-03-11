@@ -8,7 +8,7 @@ urlpatterns = [
     path("health/", views.health_check, name="health"),
     # Auth
     path("login/", LoginView.as_view(template_name="core/login.html"), name="login"),
-    path("logout/", LogoutView.as_view(template_name="core/login.html"), name="logout"),
+    path("logout/", views.logout, name="logout"),
     # Dashboard
     path("", views.dashboard, name="dashboard"),
     # Players

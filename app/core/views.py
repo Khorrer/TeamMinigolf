@@ -287,6 +287,7 @@ def session_detail(request, pk):
     )
     holes = session.course.holes.order_by("hole_number")
     players = session.players.all()
+    totalPar = sum(h.par for h in holes)
 
     # Build score grid: {player_id: {hole_id: strokes}}
     score_map = {}
@@ -312,8 +313,14 @@ def session_detail(request, pk):
         "session": session,
         "holes": holes,
         "player_data": player_data,
+        "totalPar": totalPar,
     })
 
+@login_required
+def logout(request):
+    from django.contrib.auth import logout as auth_logout
+    auth_logout(request)
+    return redirect("login")
 
 @login_required
 @require_POST
@@ -335,6 +342,7 @@ def scoring(request, pk):
     )
     holes = session.course.holes.order_by("hole_number")
     players = session.players.all()
+    totalPar = sum(h.par for h in holes)
     existing_scores = {
         (s.player_id, s.hole_id): s.strokes
         for s in session.scores.all()
@@ -349,6 +357,7 @@ def scoring(request, pk):
         "players": players,
         "existing_scores": existing_scores,
         "existing_scores_json": scores_json,
+        "totalPar": totalPar,
     })
 
 

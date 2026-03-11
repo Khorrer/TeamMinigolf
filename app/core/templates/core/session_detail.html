@@ -33,7 +33,13 @@
         {% endfor %}
         <th>Gesamt</th>
       </tr>
-    </thead>
+      <tr>
+        <th class="text-start">Par</th>
+        {% for h in holes %}
+        <th>{{ h.par }}</th>
+        {% endfor %}
+        <th>{{ totalPar }}</th>
+      </thead>
     <tbody>
       {% for pd in player_data %}
       <tr>
