@@ -33,15 +33,13 @@
 
 <body>
   {% if user.is_authenticated %}
-  <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+  <nav class="navbar navbar-expand navbar-dark bg-success">
     <div class="container-fluid">
       <a class="navbar-brand" href="{% url 'dashboard' %}">
         <i class="bi bi-flag-fill"></i> #TeamMinigolf
       </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="nav">
+      <div class="navbar-collapse">
+        {% if not request.mobile %}
         <ul class="navbar-nav me-auto">
           <li class="nav-item">
             <a class="nav-link" href="{% url 'session_list' %}"><i class="bi bi-calendar-event"></i> Spieltage</a>
@@ -62,6 +60,7 @@
             <a class="nav-link" href="{% url 'ai_import' %}"><i class="bi bi-robot"></i> AI Import</a>
           </li>
         </ul>
+        {% endif %}
         <ul class="navbar-nav">
           {% if user.is_staff %}
           <li class="nav-item">
@@ -78,9 +77,26 @@
       </div>
     </div>
   </nav>
+
+  {% comment %}
+  Old top navbar (collapsing version)
+  <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{% url 'dashboard' %}">
+        <i class="bi bi-flag-fill"></i> #TeamMinigolf
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="nav">
+        ...
+      </div>
+    </div>
+  </nav>
+  {% endcomment %}
   {% endif %}
 
-  <main class="container py-4">
+  <main class="container py-4 {% if user.is_authenticated %}pb-mobile-nav{% endif %}">
     {% if messages %}
     {% for message in messages %}
     <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
@@ -93,7 +109,62 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="text-center text-muted py-3 border-top">
+  {% if request.mobile %}
+  {% if user.is_authenticated %}
+  {% comment "" %}
+  <nav class="bottom-mobile-nav d-lg-none" aria-label="Mobile Hauptnavigation">
+    <a href="{% url 'session_list' %}" class="bottom-mobile-nav__item" title="Spieltage">
+      <i class="bi bi-calendar-event"></i>
+      <span>Spieltage</span>
+    </a>
+    <a href="{% url 'player_list' %}" class="bottom-mobile-nav__item" title="Spieler">
+      <i class="bi bi-people"></i>
+      <span>Spieler</span>
+    </a>
+    <a href="{% url 'session_create' %}" class="bottom-mobile-nav__item bottom-mobile-nav__item--center" title="Neues Spiel">
+      <i class="bi bi-plus-lg"></i>
+      <span>Neu</span>
+    </a>
+    <a href="{% url 'course_list' %}" class="bottom-mobile-nav__item" title="Anlagen">
+      <i class="bi bi-geo-alt"></i>
+      <span>Anlagen</span>
+    </a>
+    <a href="{% url 'stats' %}" class="bottom-mobile-nav__item" title="Statistiken">
+      <i class="bi bi-bar-chart"></i>
+      <span>Stats</span>
+    </a>
+  </nav>
+  {% endcomment %}
+  <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="nav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'session_list' %}"><i class="bi bi-calendar-event"></i></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'player_list' %}"><i class="bi bi-people"></i></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'session_create' %}"><i class="bi bi-plus-circle-fill"></i></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'course_list' %}"><i class="bi bi-geo-alt"></i></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'stats' %}"><i class="bi bi-bar-chart"></i></a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  {% endif %}
+  {% endif %}
+
+  <footer class="text-center text-muted py-3 border-top d-none d-lg-block">
     <small>#TeamMinigolf &copy; {{ current_year|default:"2026" }}</small>
   </footer>
 
