@@ -1,0 +1,292 @@
+{% extends "core/mobile/base_mobile.html" %}
+
+{% block title %}Scoring | {{ session.course.name }}{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title="Live Scoring" subtitle=session.course.name %}
+{% endblock %}
+
+{% block extra_css %}
+  <style>
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .score-btn {
+      min-height: 44px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 122, 255, 0.35);
+      background: rgba(0, 122, 255, 0.08);
+      color: #0058b8;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .score-btn--danger {
+      grid-column: 1 / -1;
+      border-color: rgba(255, 59, 48, 0.5);
+      background: rgba(255, 59, 48, 0.12);
+      color: #b3261e;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .score-input {
+      width: 46px;
+      min-height: 36px;
+      border: 1px solid rgba(0, 0, 0, 0.16);
+      border-radius: 8px;
+      text-align: center;
+      font-size: 14px;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    .score-input.is-invalid {
+      border-color: #ff3b30;
+      background: rgba(255, 59, 48, 0.06);
+    }
+
+    .score-input.is-valid {
+      border-color: #34c759;
+      background: rgba(52, 199, 89, 0.08);
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <article class="mobile-card">
+    <div class="mobile-toolbar" style="justify-content: space-between; margin-bottom: 8px;">
+      <p class="mobile-subtitle" style="margin: 0;">{{ session.played_at }}</p>
+      <a href="{% url 'session_detail' session.pk %}" class="mobile-chip">Scorecard</a>
+    </div>
+  </article>
+
+  <article class="mobile-card" id="caddie-bot">
+    <h2>Caddie Bot</h2>
+    <p id="bot-question" class="mobile-meta" style="margin-top: 0;">Lade Spieler...</p>
+
+    <div id="bot-buttons" class="score-grid" style="margin-top: 10px;">
+      {% for i in "1234567" %}
+        <button type="button" class="score-btn bot-score-btn" data-score="{{ i }}">{{ i }}</button>
+      {% endfor %}
+      <button type="button" class="score-btn score-btn--danger bot-score-btn" data-score="8">Nicht geschafft</button>
+    </div>
+
+    <p id="bot-done-msg" class="mobile-pill mobile-pill--success" style="display: none; margin-top: 10px; width: fit-content;">Alle Schläge sind erfasst</p>
+  </article>
+
+  <article class="mobile-card">
+    <h2>Scoring</h2>
+    <div class="mobile-table-wrap">
+      <table class="mobile-table" id="scoring-table">
+        <thead>
+          <tr>
+            <th>Spieler</th>
+            {% for h in holes %}
+              <th>{{ h.hole_number }}</th>
+            {% endfor %}
+            <th>Σ</th>
+          </tr>
+          <tr>
+            <th>Par</th>
+            {% for h in holes %}
+              <th>{{ h.par }}</th>
+            {% endfor %}
+            <th>{{ totalPar }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for player in players %}
+            <tr data-player-id="{{ player.id }}">
+              <td><strong>{{ player.name }}</strong></td>
+              {% for hole in holes %}
+                <td>
+                  <input type="number" class="score-input" data-player="{{ player.id }}" data-hole="{{ hole.id }}" min="1" max="10">
+                </td>
+              {% endfor %}
+              <td class="player-total" data-player="{{ player.id }}">–</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <p id="save-status" class="mobile-muted" style="margin-top: 8px;">&nbsp;</p>
+  </article>
+
+  {% if session.status == 'live' %}
+    <form method="post" action="{% url 'session_complete' session.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="mobile-primary-btn" onclick="return confirm('Spieltag abschließen?')">Spieltag abschließen</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const csrfToken = '{{ csrf_token }}';
+    const saveUrl = '{% url "score_save" session.pk %}';
+    const statusEl = document.getElementById('save-status');
+
+    const existingScores = JSON.parse('{{ existing_scores_json|escapejs }}');
+
+    document.querySelectorAll('.score-input').forEach(input => {
+      const key = input.dataset.player + '_' + input.dataset.hole;
+      if (existingScores[key]) {
+        input.value = existingScores[key];
+      }
+    });
+
+    updateAllTotals();
+
+    document.querySelectorAll('.score-input').forEach(input => {
+      let timeout;
+      input.addEventListener('change', function () {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => saveScore(this), 300);
+      });
+      input.addEventListener('keyup', function (e) {
+        if (e.key === 'Enter' || e.key === 'Tab') return;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => saveScore(this), 800);
+      });
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const inputs = Array.from(document.querySelectorAll('.score-input'));
+          const idx = inputs.indexOf(this);
+          if (idx < inputs.length - 1) {
+            inputs[idx + 1].focus();
+            inputs[idx + 1].select();
+          }
+        }
+      });
+    });
+
+    function saveScore(input) {
+      const playerId = input.dataset.player;
+      const holeId = input.dataset.hole;
+      const strokes = input.value ? parseInt(input.value) : null;
+
+      if (strokes !== null && (strokes < 1 || strokes > 10)) {
+        input.classList.add('is-invalid');
+        return;
+      }
+      input.classList.remove('is-invalid');
+
+      statusEl.textContent = 'Speichern...';
+
+      fetch(saveUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({ player_id: parseInt(playerId), hole_id: parseInt(holeId), strokes: strokes }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            statusEl.textContent = 'Fehler: ' + data.error;
+            input.classList.add('is-invalid');
+          } else {
+            statusEl.textContent = 'Gespeichert';
+            input.classList.add('is-valid');
+            setTimeout(() => input.classList.remove('is-valid'), 900);
+            if (data.total !== undefined) {
+              document.querySelector(`.player-total[data-player="${playerId}"]`).textContent = data.total;
+            }
+          }
+        })
+        .catch(() => {
+          statusEl.textContent = 'Netzwerkfehler';
+        });
+
+      updateAllTotals();
+      updateBotUI();
+    }
+
+    function updateAllTotals() {
+      const players = new Set();
+      document.querySelectorAll('.score-input').forEach(i => players.add(i.dataset.player));
+      players.forEach(pid => {
+        let total = 0;
+        let hasAny = false;
+        document.querySelectorAll(`.score-input[data-player="${pid}"]`).forEach(i => {
+          if (i.value) {
+            total += parseInt(i.value);
+            hasAny = true;
+          }
+        });
+        document.querySelector(`.player-total[data-player="${pid}"]`).textContent = hasAny ? total : '–';
+      });
+    }
+
+    const botQuestionEl = document.getElementById('bot-question');
+    const botButtonsContainer = document.getElementById('bot-buttons');
+    const botDoneMsg = document.getElementById('bot-done-msg');
+
+    const orderedPlayers = [];
+    document.querySelectorAll('tbody tr[data-player-id]').forEach(tr => {
+      orderedPlayers.push({
+        id: tr.dataset.playerId,
+        name: tr.querySelector('strong').textContent.trim()
+      });
+    });
+
+    const orderedHoles = [];
+    if (orderedPlayers.length > 0) {
+      document.querySelectorAll(`.score-input[data-player="${orderedPlayers[0].id}"]`).forEach(input => {
+        orderedHoles.push(input.dataset.hole);
+      });
+    }
+
+    function findNextTurn() {
+      for (let i = 0; i < orderedHoles.length; i++) {
+        for (let j = 0; j < orderedPlayers.length; j++) {
+          const input = document.querySelector(`.score-input[data-player="${orderedPlayers[j].id}"][data-hole="${orderedHoles[i]}"]`);
+          if (input && !input.value) {
+            return {
+              player: orderedPlayers[j],
+              holeNum: i + 1,
+              input: input
+            };
+          }
+        }
+      }
+      return null;
+    }
+
+    function updateBotUI() {
+      const next = findNextTurn();
+      if (next) {
+        botQuestionEl.innerHTML = `Loch ${next.holeNum}: Wie viele Schläge hat <strong>${next.player.name}</strong> gebraucht?`;
+        botButtonsContainer.style.display = 'grid';
+        botDoneMsg.style.display = 'none';
+      } else {
+        botQuestionEl.textContent = 'Spieltag komplett';
+        botButtonsContainer.style.display = 'none';
+        botDoneMsg.style.display = 'inline-flex';
+      }
+    }
+
+    document.querySelectorAll('.bot-score-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const score = this.dataset.score;
+        const next = findNextTurn();
+        if (next) {
+          next.input.value = score;
+          next.input.dispatchEvent(new Event('change'));
+          updateBotUI();
+        }
+      });
+    });
+
+    updateBotUI();
+  })();
+</script>
+{% endblock %}

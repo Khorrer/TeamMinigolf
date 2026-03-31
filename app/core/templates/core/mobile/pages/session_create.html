@@ -1,0 +1,61 @@
+{% extends "core/mobile/base_mobile.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Neuer Spieltag | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title="Neuer Spieltag" subtitle="Session mobil anlegen" %}
+{% endblock %}
+
+{% block content %}
+  <form method="post" class="mobile-form">
+    {% csrf_token %}
+
+    <article class="mobile-card">
+      <label for="{{ form.course.id_for_label }}" class="mobile-label">Anlage</label>
+      {% render_field form.course class="mobile-select" %}
+      {% for error in form.course.errors %}
+        <p class="mobile-muted">{{ error }}</p>
+      {% endfor %}
+    </article>
+
+    <article class="mobile-card">
+      <label for="{{ form.played_at.id_for_label }}" class="mobile-label">Datum</label>
+      {% render_field form.played_at class="mobile-input" %}
+      {% for error in form.played_at.errors %}
+        <p class="mobile-muted">{{ error }}</p>
+      {% endfor %}
+
+      <label for="{{ form.season.id_for_label }}" class="mobile-label" style="margin-top: 10px;">Saison</label>
+      {% render_field form.season class="mobile-input" %}
+      {% for error in form.season.errors %}
+        <p class="mobile-muted">{{ error }}</p>
+      {% endfor %}
+    </article>
+
+    <article class="mobile-card">
+      <p class="mobile-label">Spieler</p>
+      <div class="mobile-checkbox-grid">
+        {% for checkbox in form.players %}
+          <label class="mobile-checkbox-item" for="{{ checkbox.id_for_label }}">
+            {{ checkbox.tag }}
+            <span>{{ checkbox.choice_label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      {% for error in form.players.errors %}
+        <p class="mobile-muted">{{ error }}</p>
+      {% endfor %}
+    </article>
+
+    <article class="mobile-card">
+      <label for="{{ form.notes.id_for_label }}" class="mobile-label">Notizen</label>
+      {% render_field form.notes class="mobile-input" %}
+    </article>
+
+    <div class="mobile-actions">
+      <button type="submit" class="mobile-primary-btn">Spieltag starten</button>
+      <a href="{% url 'session_list' %}" class="mobile-secondary-btn">Abbrechen</a>
+    </div>
+  </form>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "core/mobile/base_mobile.html" %}
+
+{% block title %}Session Detail | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title=session.course.name subtitle=session.played_at %}
+{% endblock %}
+
+{% block content %}
+  <article class="mobile-card">
+    <p class="mobile-subtitle">Saison {{ session.season }}</p>
+    {% if session.status == 'live' %}
+      <p><span class="mobile-pill mobile-pill--warn">LIVE</span></p>
+      <div class="mobile-toolbar" style="justify-content: flex-start; margin: 8px 0 0;">
+        <a href="{% url 'scoring' session.pk %}" class="mobile-primary-btn">Scoring</a>
+      </div>
+    {% else %}
+      <p><span class="mobile-pill mobile-pill--success">Abgeschlossen</span></p>
+    {% endif %}
+
+    {% if session.notes %}
+      <p class="mobile-meta">{{ session.notes }}</p>
+    {% endif %}
+  </article>
+
+  <article class="mobile-card">
+    <h2>Scorecard</h2>
+    <div class="mobile-table-wrap">
+      <table class="mobile-table">
+        <thead>
+          <tr>
+            <th>Spieler</th>
+            {% for h in holes %}
+              <th>{{ h.hole_number }}</th>
+            {% endfor %}
+            <th>Gesamt</th>
+          </tr>
+          <tr>
+            <th>Par</th>
+            {% for h in holes %}
+              <th>{{ h.par }}</th>
+            {% endfor %}
+            <th>{{ totalPar }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pd in player_data %}
+            <tr>
+              <td><strong>{{ pd.player.name }}</strong></td>
+              {% for s in pd.scores %}
+                <td>{% if s %}{{ s }}{% else %}-{% endif %}</td>
+              {% endfor %}
+              <td><strong>{{ pd.total }}</strong></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  {% if session.status == 'live' %}
+    <form method="post" action="{% url 'session_complete' session.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="mobile-primary-btn" onclick="return confirm('Spieltag abschließen?')">Spieltag abschließen</button>
+    </form>
+  {% endif %}
+{% endblock %}

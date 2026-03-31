@@ -1,0 +1,40 @@
+{% extends "core/mobile/base_mobile.html" %}
+{% load widget_tweaks %}
+
+{% block title %}{{ title }} | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title=title subtitle="Spieler mobil verwalten" %}
+{% endblock %}
+
+{% block content %}
+  <form method="post" class="mobile-form">
+    {% csrf_token %}
+
+    <article class="mobile-card">
+      {% for field in form %}
+        <div style="margin-bottom: 10px;">
+          <label for="{{ field.id_for_label }}" class="mobile-label">{{ field.label }}</label>
+
+          {% if field.field.widget.input_type == 'checkbox' %}
+            <label class="mobile-checkbox-item" for="{{ field.id_for_label }}">
+              {{ field }}
+              <span>Aktiv</span>
+            </label>
+          {% else %}
+            {% render_field field class="mobile-input" %}
+          {% endif %}
+
+          {% for error in field.errors %}
+            <p class="mobile-muted">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </article>
+
+    <div class="mobile-actions">
+      <button type="submit" class="mobile-primary-btn">Speichern</button>
+      <a href="{% url 'player_list' %}" class="mobile-secondary-btn">Abbrechen</a>
+    </div>
+  </form>
+{% endblock %}
