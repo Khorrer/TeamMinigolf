@@ -76,6 +76,15 @@ class ScoringTest(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["status"], "saved")
+        self.assertIsNotNone(data.get("best_hole_strokes"))
+        self.assertTrue(
+            Score.objects.filter(
+                session=self.session,
+                player__name="Best",
+                hole=hole,
+                strokes=3,
+            ).exists()
+        )
 
     def test_score_save_invalid_player(self):
         hole = self.course.holes.first()
@@ -125,8 +134,8 @@ class AIScoreImportTest(TestCase):
         self.assertEqual(response.status_code, 200)
         session = Session.objects.get(course=self.course, played_at="2026-03-10")
         self.assertEqual(session.status, Session.Status.COMPLETED)
-        self.assertEqual(session.players.count(), 2)
-        self.assertEqual(Score.objects.filter(session=session).count(), 36)
+        self.assertEqual(session.players.count(), 3)
+        self.assertEqual(Score.objects.filter(session=session).count(), 54)
 
     def test_import_rejects_unknown_player(self):
         payload = {

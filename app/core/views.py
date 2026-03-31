@@ -15,6 +15,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 
+from .best_player import ensure_best_player_in_session, recompute_best_scores_for_session
 from .forms import AIScoreImportForm, CourseForm, PlayerForm, SessionCreateForm
 from .models import AuditLog, Course, Hole, Player, Score, Session, SessionPlayer
 
@@ -207,7 +208,8 @@ def session_create(request):
             selected_players = form.cleaned_data["players"]
             random_players = selected_players.order_by('?') 
             for player in random_players:
-                SessionPlayer.objects.create(session=session, player=player)            
+                SessionPlayer.objects.create(session=session, player=player)
+            ensure_best_player_in_session(session)
             return redirect("scoring", pk=session.pk)
     else:
         form = SessionCreateForm(initial={
@@ -272,6 +274,8 @@ def ai_import(request):
                                 ]
                             )
 
+                            ensure_best_player_in_session(session)
+
                             score_rows = []
                             for player, scores in resolved_players:
                                 for index, strokes in enumerate(scores):
@@ -284,6 +288,7 @@ def ai_import(request):
                                         )
                                     )
                             Score.objects.bulk_create(score_rows)
+                                    recompute_best_scores_for_session(session)
 
                         messages.success(
                             request,
@@ -308,6 +313,11 @@ def ai_import(request):
 
 @login_required
 def session_detail(request, pk):
+    session = get_object_or_404(
+        Session.objects.select_related("course").prefetch_related("players", "scores__hole", "scores__player"),
+        pk=pk,
+    )
+    recompute_best_scores_for_session(session)
     session = get_object_or_404(
         Session.objects.select_related("course").prefetch_related("players", "scores__hole", "scores__player"),
         pk=pk,
@@ -367,13 +377,22 @@ def scoring(request, pk):
         Session.objects.select_related("course").prefetch_related("players"),
         pk=pk,
     )
+    best_player = recompute_best_scores_for_session(session)
     holes = session.course.holes.order_by("hole_number")
-    players = session.players.all().order_by('sessionplayer__id')
+    players = session.players.exclude(pk=best_player.pk).all().order_by('sessionplayer__id')
     totalPar = sum(h.par for h in holes)
     existing_scores = {
         (s.player_id, s.hole_id): s.strokes
         for s in session.scores.all()
     }
+    best_scores = [
+        {
+            "hole_id": h.id,
+            "strokes": existing_scores.get((best_player.id, h.id)),
+        }
+        for h in holes
+    ]
+    best_total = sum((item["strokes"] or 0) for item in best_scores)
     # JSON-serializable version for JavaScript: {"playerId_holeId": strokes}
     scores_json = json.dumps({
         f"{pid}_{hid}": strokes for (pid, hid), strokes in existing_scores.items()
@@ -385,6 +404,8 @@ def scoring(request, pk):
         "existing_scores": existing_scores,
         "existing_scores_json": scores_json,
         "totalPar": totalPar,
+        "best_scores": best_scores,
+        "best_total": best_total,
     })
 
 
@@ -392,6 +413,7 @@ def scoring(request, pk):
 @require_POST
 def score_save(request, session_pk):
     session = get_object_or_404(Session, pk=session_pk)
+    best_player = ensure_best_player_in_session(session)
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -403,6 +425,15 @@ def score_save(request, session_pk):
 
     if not all([player_id, hole_id]):
         return JsonResponse({"error": "Missing player_id or hole_id"}, status=400)
+
+    try:
+        player_id = int(player_id)
+        hole_id = int(hole_id)
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Invalid player_id or hole_id"}, status=400)
+
+    if player_id == best_player.id:
+        return JsonResponse({"error": "Best player is computed automatically"}, status=400)
 
     # Validate player is part of session
     if not session.session_players.filter(player_id=player_id).exists():
@@ -426,7 +457,22 @@ def score_save(request, session_pk):
                 object_id=0,
                 details={"session": session.pk, "player": player_id, "hole": hole_id},
             )
-        return JsonResponse({"status": "deleted"})
+        recompute_best_scores_for_session(session, hole_ids=[hole_id])
+        best_hole_strokes = (
+            Score.objects.filter(
+                session=session,
+                player=best_player,
+                hole_id=hole_id,
+            )
+            .values_list("strokes", flat=True)
+            .first()
+        )
+        best_total = session.scores.filter(player=best_player).aggregate(t=Sum("strokes"))["t"] or 0
+        return JsonResponse({
+            "status": "deleted",
+            "best_hole_strokes": best_hole_strokes,
+            "best_total": best_total,
+        })
 
     strokes = int(strokes)
     if strokes < 1 or strokes > 10:
@@ -448,7 +494,23 @@ def score_save(request, session_pk):
 
     # Return updated total for player
     total = session.scores.filter(player_id=player_id).aggregate(t=Sum("strokes"))["t"] or 0
-    return JsonResponse({"status": "saved", "total": total})
+    recompute_best_scores_for_session(session, hole_ids=[hole_id])
+    best_hole_strokes = (
+        Score.objects.filter(
+            session=session,
+            player=best_player,
+            hole_id=hole_id,
+        )
+        .values_list("strokes", flat=True)
+        .first()
+    )
+    best_total = session.scores.filter(player=best_player).aggregate(t=Sum("strokes"))["t"] or 0
+    return JsonResponse({
+        "status": "saved",
+        "total": total,
+        "best_hole_strokes": best_hole_strokes,
+        "best_total": best_total,
+    })
 
 
 # ---------------------------------------------------------------------------

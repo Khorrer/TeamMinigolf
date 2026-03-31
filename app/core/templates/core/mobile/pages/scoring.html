@@ -110,6 +110,13 @@
               <td class="player-total" data-player="{{ player.id }}">–</td>
             </tr>
           {% endfor %}
+          <tr>
+            <td><strong>Best</strong></td>
+            {% for item in best_scores %}
+              <td class="best-hole" data-hole="{{ item.hole_id }}">{% if item.strokes %}{{ item.strokes }}{% else %}–{% endif %}</td>
+            {% endfor %}
+            <td class="best-total"><strong>{% if best_total %}{{ best_total }}{% else %}–{% endif %}</strong></td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -200,6 +207,7 @@
             if (data.total !== undefined) {
               document.querySelector(`.player-total[data-player="${playerId}"]`).textContent = data.total;
             }
+            updateBestRow(holeId, data);
           }
         })
         .catch(() => {
@@ -208,6 +216,22 @@
 
       updateAllTotals();
       updateBotUI();
+    }
+
+    function updateBestRow(holeId, data) {
+      if (!data || (!('best_hole_strokes' in data) && !('best_total' in data))) {
+        return;
+      }
+
+      const bestHoleEl = document.querySelector(`.best-hole[data-hole="${holeId}"]`);
+      if (bestHoleEl && 'best_hole_strokes' in data) {
+        bestHoleEl.textContent = data.best_hole_strokes ? data.best_hole_strokes : '–';
+      }
+
+      const bestTotalEl = document.querySelector('.best-total');
+      if (bestTotalEl && 'best_total' in data) {
+        bestTotalEl.textContent = data.best_total ? data.best_total : '–';
+      }
     }
 
     function updateAllTotals() {
