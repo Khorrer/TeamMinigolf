@@ -3,19 +3,60 @@
 {% block title %}Home | #TeamMinigolf{% endblock %}
 
 {% block mobile_header %}
-  {% include "core/mobile/components/_header.html" with title="Home" subtitle="Dein Minigolf auf einen Blick" %}
+  {% include "core/mobile/components/_header.html" with title="Dashboard" subtitle="Dein Minigolf auf einen Blick" %}
 {% endblock %}
 
 {% block content %}
-  <article class="mobile-card">
-    <h2>Willkommen</h2>
-    <p>Diese mobile Ansicht nutzt eine Apple-konforme Bottom Tab Bar und sichere Safe-Area-Abstaende.</p>
-  </article>
+  <div class="mobile-toolbar">
+    <a href="{% url 'session_create' %}" class="mobile-primary-btn">Neuer Spieltag</a>
+  </div>
 
-  <ul class="mobile-link-list">
-    <li><a class="mobile-link" href="{% url 'session_list' %}">Spieltage</a></li>
-    <li><a class="mobile-link" href="{% url 'session_create' %}">Neu starten</a></li>
-    <li><a class="mobile-link" href="{% url 'stats' %}">Statistiken</a></li>
-    <li><a class="mobile-link" href="{% url 'player_list' %}">Spieler</a></li>
-  </ul>
+  <section class="mobile-kpi-grid" aria-label="Dashboard Kennzahlen">
+    <article class="mobile-kpi-card">
+      <span class="mobile-kpi-value">{{ player_count }}</span>
+      <p class="mobile-kpi-label">Aktive Spieler</p>
+    </article>
+    <article class="mobile-kpi-card">
+      <span class="mobile-kpi-value">{{ course_count }}</span>
+      <p class="mobile-kpi-label">Anlagen</p>
+    </article>
+  </section>
+
+  {% if live_sessions %}
+    <article class="mobile-card">
+      <h2>Laufende Spieltage</h2>
+      <ul class="mobile-list">
+        {% for s in live_sessions %}
+          <li>
+            <a href="{% url 'scoring' s.pk %}" class="mobile-list-item mobile-list-item--warn">
+              <div>
+                <p class="mobile-title">{{ s.course.name }}</p>
+                <p class="mobile-subtitle">{{ s.played_at }}</p>
+              </div>
+              <span class="mobile-pill mobile-pill--warn">LIVE</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </article>
+  {% endif %}
+
+  {% if recent_sessions %}
+    <article class="mobile-card">
+      <h2>Letzte Spieltage</h2>
+      <ul class="mobile-list">
+        {% for s in recent_sessions %}
+          <li>
+            <a href="{% url 'session_detail' s.pk %}" class="mobile-list-item">
+              <div>
+                <p class="mobile-title">{{ s.course.name }}</p>
+                <p class="mobile-subtitle">{{ s.played_at }}</p>
+              </div>
+              <span class="mobile-pill mobile-pill--success">{{ s.season }}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </article>
+  {% endif %}
 {% endblock %}

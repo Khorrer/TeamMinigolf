@@ -1,4 +1,5 @@
 {% extends "core/mobile/base_mobile.html" %}
+{% load humanize %}
 
 {% block title %}Scores | #TeamMinigolf{% endblock %}
 
@@ -7,9 +8,61 @@
 {% endblock %}
 
 {% block content %}
+  <form method="get" class="mobile-form" aria-label="Statistikfilter">
+    <select name="season" class="mobile-select">
+      <option value="">Alle Saisons</option>
+      {% for s in seasons %}
+        <option value="{{ s }}" {% if current_season|add:"0" == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="course" class="mobile-select">
+      <option value="">Alle Anlagen</option>
+      {% for c in courses %}
+        <option value="{{ c.pk }}" {% if current_course|add:"0" == c.pk %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit" class="mobile-primary-btn">Filtern</button>
+  </form>
+
   <article class="mobile-card">
-    <h2>Auswertungen</h2>
-    <p>Vergleiche Runden, erkenne Muster und springe direkt zur Statistikansicht.</p>
-    <a class="mobile-link" href="{% url 'stats' %}">Zu den Statistiken</a>
+    <h2>Spieler-Uebersicht</h2>
+    <ul class="mobile-list">
+      {% for ps in player_stats %}
+        <li>
+          <div class="mobile-list-item">
+            <div>
+              <p class="mobile-title">{{ ps.player__name }}</p>
+              <p class="mobile-meta">Runden: {{ ps.rounds }} · Ø/Bahn: {{ ps.avg_strokes|floatformat:2 }}</p>
+              <p class="mobile-subtitle">Gesamt: {{ ps.total_strokes }} · Beste Bahn: {{ ps.best_hole }}</p>
+            </div>
+          </div>
+        </li>
+      {% empty %}
+        <li>
+          <p class="mobile-muted">Keine Daten vorhanden.</p>
+        </li>
+      {% endfor %}
+    </ul>
   </article>
+
+  {% if hole_stats %}
+    <article class="mobile-card">
+      <h2>Bahnen-Statistik</h2>
+      <ul class="mobile-list">
+        {% for hs in hole_stats %}
+          <li>
+            <div class="mobile-list-item">
+              <div>
+                <p class="mobile-title">Bahn {{ hs.hole__hole_number }}</p>
+                <p class="mobile-subtitle">Par: {% if hs.hole__par %}{{ hs.hole__par }}{% else %}–{% endif %} · Ø Schlaege: {{ hs.avg_strokes|floatformat:2 }}</p>
+              </div>
+              <span class="mobile-pill mobile-pill--neutral">{{ hs.count }}</span>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </article>
+  {% endif %}
 {% endblock %}
