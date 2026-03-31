@@ -16,6 +16,7 @@ urlpatterns = [
     path("players/", views.player_list, name="player_list"),
     path("players/create/", views.player_create, name="player_create"),
     path("players/<int:pk>/edit/", views.player_edit, name="player_edit"),
+    path("players/<int:pk>/profile-stats/", views.player_profile_stats, name="player_profile_stats"),
     # Courses
     path("courses/", views.course_list, name="course_list"),
     path("courses/create/", views.course_create, name="course_create"),

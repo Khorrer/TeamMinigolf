@@ -21,24 +21,25 @@
   </a>
 
   <a href="{% url 'stats' %}"
-     class="tab-item {% if request.resolver_match.url_name == 'stats' or request.resolver_match.url_name == 'leaderboard' %}tab-item--active{% endif %}"
+     class="tab-item {% if request.resolver_match.url_name == 'stats' %}tab-item--active{% endif %}"
      role="tab"
-     aria-selected="{% if request.resolver_match.url_name == 'stats' or request.resolver_match.url_name == 'leaderboard' %}true{% else %}false{% endif %}">
+     aria-selected="{% if request.resolver_match.url_name == 'stats' %}true{% else %}false{% endif %}">
     <span class="tab-icon" aria-hidden="true">
       <i class="bi bi-bar-chart"></i>
     </span>
     <span class="tab-label">Stats</span>
   </a>
 
-  <a href="{% url 'player_list' %}"
-     class="tab-item {% if request.resolver_match.url_name == 'player_list' or request.resolver_match.url_name == 'player_create' or request.resolver_match.url_name == 'player_edit' %}tab-item--active{% endif %}"
+  <a href="{% url 'leaderboard' %}"
+     class="tab-item {% if request.resolver_match.url_name == 'leaderboard' %}tab-item--active{% endif %}"
      role="tab"
-     aria-selected="{% if request.resolver_match.url_name == 'player_list' or request.resolver_match.url_name == 'player_create' or request.resolver_match.url_name == 'player_edit' %}true{% else %}false{% endif %}">
+     aria-selected="{% if request.resolver_match.url_name == 'leaderboard' %}true{% else %}false{% endif %}">
     <span class="tab-icon" aria-hidden="true">
-      <i class="bi bi-person"></i>
+      <i class="bi bi-trophy"></i>
     </span>
-    <span class="tab-label">Profil</span>
+    <span class="tab-label">Board</span>
   </a>
+
 </nav>
 
 <style>
