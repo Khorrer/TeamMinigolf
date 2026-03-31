@@ -8,11 +8,21 @@ from .models import Hole, Player, Score, Session, SessionPlayer
 BEST_PLAYER_NAME = "Best"
 
 
+def is_best_player_name(name: str | None) -> bool:
+    if not name:
+        return False
+    return name.strip().casefold() == BEST_PLAYER_NAME.casefold()
+
+
 def get_or_create_best_player() -> Player:
     best_player, _ = Player.objects.get_or_create(
         name=BEST_PLAYER_NAME,
         defaults={"active": False},
     )
+    # Keep Best as system-managed pseudo player.
+    if best_player.active:
+        best_player.active = False
+        best_player.save(update_fields=["active"])
     return best_player
 
 

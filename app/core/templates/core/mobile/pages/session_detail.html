@@ -12,7 +12,7 @@
     {% if session.status == 'live' %}
       <p><span class="mobile-pill mobile-pill--warn">LIVE</span></p>
       <div class="mobile-toolbar" style="justify-content: flex-start; margin: 8px 0 0;">
-        <a href="{% url 'scoring' session.pk %}" class="mobile-primary-btn">Scoring</a>
+        <a href="{% url 'scoring' session.pk %}" class="mobile-primary-btn"><i class="bi bi-pencil-square"></i> Scoring</a>
       </div>
     {% else %}
       <p><span class="mobile-pill mobile-pill--success">Abgeschlossen</span></p>
@@ -61,7 +61,7 @@
   {% if session.status == 'live' %}
     <form method="post" action="{% url 'session_complete' session.pk %}">
       {% csrf_token %}
-      <button type="submit" class="mobile-primary-btn" onclick="return confirm('Spieltag abschließen?')">Spieltag abschließen</button>
+      <button type="submit" class="mobile-primary-btn" onclick="return confirm('Spieltag abschließen?')"><i class="bi bi-check-lg"></i> Spieltag abschließen</button>
     </form>
   {% endif %}
 {% endblock %}

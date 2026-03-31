@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.utils.dateparse import parse_date
 import json
 
+from .best_player import BEST_PLAYER_NAME, is_best_player_name
 from .models import Course, Player, Session
 
 
@@ -10,6 +11,14 @@ class PlayerForm(forms.ModelForm):
     class Meta:
         model = Player
         fields = ["name", "active"]
+
+    def clean_name(self):
+        name = self.cleaned_data["name"]
+        if is_best_player_name(name):
+            raise ValidationError(
+                f"'{BEST_PLAYER_NAME}' ist reserviert und wird automatisch verwaltet."
+            )
+        return name
 
 
 class CourseForm(forms.ModelForm):
@@ -29,7 +38,7 @@ class CourseForm(forms.ModelForm):
 
 class SessionCreateForm(forms.ModelForm):
     players = forms.ModelMultipleChoiceField(
-        queryset=Player.objects.filter(active=True),
+        queryset=Player.objects.filter(active=True).exclude(name__iexact=BEST_PLAYER_NAME),
         widget=forms.CheckboxSelectMultiple,
         label="Spieler",
     )

@@ -4,10 +4,7 @@
      role="tab"
      aria-selected="{% if request.resolver_match.url_name == 'dashboard' %}true{% else %}false{% endif %}">
     <span class="tab-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 10.5L12 3l9 7.5"></path>
-        <path d="M5 9.8V21h14V9.8"></path>
-      </svg>
+      <i class="bi bi-house"></i>
     </span>
     <span class="tab-label">Home</span>
   </a>
@@ -17,11 +14,7 @@
      role="tab"
      aria-selected="{% if request.resolver_match.url_name == 'session_list' or request.resolver_match.url_name == 'session_create' or request.resolver_match.url_name == 'session_detail' or request.resolver_match.url_name == 'scoring' %}true{% else %}false{% endif %}">
     <span class="tab-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="9"></circle>
-        <path d="M12 3v18"></path>
-        <path d="M3 12h18"></path>
-      </svg>
+      <i class="bi bi-controller"></i>
     </span>
     <span class="tab-label">Spielen</span>
     {% include "core/mobile/components/_badge.html" with count=open_sessions_count %}
@@ -32,11 +25,7 @@
      role="tab"
      aria-selected="{% if request.resolver_match.url_name == 'stats' or request.resolver_match.url_name == 'leaderboard' %}true{% else %}false{% endif %}">
     <span class="tab-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M5 20V10"></path>
-        <path d="M12 20V6"></path>
-        <path d="M19 20V13"></path>
-      </svg>
+      <i class="bi bi-bar-chart"></i>
     </span>
     <span class="tab-label">Stats</span>
   </a>
@@ -46,10 +35,7 @@
      role="tab"
      aria-selected="{% if request.resolver_match.url_name == 'player_list' or request.resolver_match.url_name == 'player_create' or request.resolver_match.url_name == 'player_edit' %}true{% else %}false{% endif %}">
     <span class="tab-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="8" r="4"></circle>
-        <path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"></path>
-      </svg>
+      <i class="bi bi-person"></i>
     </span>
     <span class="tab-label">Profil</span>
   </a>
@@ -98,6 +84,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .tab-icon i {
+    font-size: 20px;
   }
 
   .tab-label {

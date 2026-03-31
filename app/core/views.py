@@ -15,7 +15,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 
-from .best_player import ensure_best_player_in_session, recompute_best_scores_for_session
+from .best_player import BEST_PLAYER_NAME, ensure_best_player_in_session, recompute_best_scores_for_session
 from .forms import AIScoreImportForm, CourseForm, PlayerForm, SessionCreateForm
 from .models import AuditLog, Course, Hole, Player, Score, Session, SessionPlayer
 
@@ -107,7 +107,7 @@ def dashboard(request):
 # ---------------------------------------------------------------------------
 @login_required
 def player_list(request):
-    players = Player.objects.annotate(
+    players = Player.objects.exclude(name__iexact=BEST_PLAYER_NAME).annotate(
         session_count=Count("sessions"),
         avg_strokes=Avg("scores__strokes"),
     )
@@ -126,6 +126,9 @@ def player_create(request):
 @login_required
 def player_edit(request, pk):
     player = get_object_or_404(Player, pk=pk)
+    if player.name.casefold() == BEST_PLAYER_NAME.casefold():
+        messages.error(request, "'Best' wird automatisch verwaltet und kann nicht bearbeitet werden.")
+        return redirect("player_list")
     form = PlayerForm(request.POST or None, instance=player)
     if form.is_valid():
         form.save()
@@ -288,7 +291,7 @@ def ai_import(request):
                                         )
                                     )
                             Score.objects.bulk_create(score_rows)
-                                    recompute_best_scores_for_session(session)
+                            recompute_best_scores_for_session(session)
 
                         messages.success(
                             request,
@@ -298,7 +301,11 @@ def ai_import(request):
     else:
         form = AIScoreImportForm()
 
-    existing_players = Player.objects.filter(active=True).order_by("name")
+    existing_players = (
+        Player.objects.filter(active=True)
+        .exclude(name__iexact=BEST_PLAYER_NAME)
+        .order_by("name")
+    )
 
     return render(
         request,
@@ -521,7 +528,7 @@ def stats_overview(request):
     season = request.GET.get("season")
     course_id = request.GET.get("course")
 
-    score_qs = Score.objects.all()
+    score_qs = Score.objects.exclude(player__name__iexact=BEST_PLAYER_NAME)
     if season and season.isdigit():
         score_qs = score_qs.filter(session__season=int(season))
     if course_id and course_id.isdigit():
@@ -566,7 +573,7 @@ def stats_overview(request):
 def leaderboard(request):
     season = request.GET.get("season", str(date.today().year))
 
-    score_qs = Score.objects.all()
+    score_qs = Score.objects.exclude(player__name__iexact=BEST_PLAYER_NAME)
     if season and season.isdigit():
         score_qs = score_qs.filter(session__season=int(season))
 

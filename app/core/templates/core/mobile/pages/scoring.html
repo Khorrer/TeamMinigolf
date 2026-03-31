@@ -127,7 +127,7 @@
   {% if session.status == 'live' %}
     <form method="post" action="{% url 'session_complete' session.pk %}">
       {% csrf_token %}
-      <button type="submit" class="mobile-primary-btn" onclick="return confirm('Spieltag abschließen?')">Spieltag abschließen</button>
+      <button type="submit" class="mobile-primary-btn" onclick="return confirm('Spieltag abschließen?')"><i class="bi bi-check-lg"></i> Spieltag abschließen</button>
     </form>
   {% endif %}
 {% endblock %}

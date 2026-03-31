@@ -13,7 +13,7 @@
           <a href="{% url 'admin:index' %}" class="mobile-page-header__action">Admin</a>
         {% endif %}
         <span class="mobile-page-header__user">{{ user.username }}</span>
-        <a href="{% url 'logout' %}" class="mobile-page-header__action mobile-page-header__action--danger">Logout</a>
+        <a class="nav-link" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i></a>
       </div>
     {% endif %}
   </div>
@@ -64,7 +64,7 @@
   .mobile-page-header__user {
     min-height: 30px;
     padding: 0 9px;
-    border-radius: 999px;
+    border-radius: 12px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
