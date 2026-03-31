@@ -1,0 +1,15 @@
+{% extends "core/mobile/base_mobile.html" %}
+
+{% block title %}Spielen | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title="Spielen" subtitle="Runden und laufende Spiele" %}
+{% endblock %}
+
+{% block content %}
+  <article class="mobile-card">
+    <h2>Spielbetrieb</h2>
+    <p>Alle Spieltage und laufenden Sessions findest du direkt ueber die Tab-Navigation.</p>
+    <a class="mobile-link" href="{% url 'session_list' %}">Zur Session-Liste</a>
+  </article>
+{% endblock %}

@@ -1,0 +1,12 @@
+{# core/router.html #}
+{# Entscheidet serverseitig zwischen Mobile- und Desktop-Template. #}
+
+{% if request.user_agent.is_mobile or request.mobile %}
+    {% if mobile_template %}
+        {% include mobile_template %}
+    {% else %}
+        {% include desktop_template %}
+    {% endif %}
+{% else %}
+    {% include desktop_template %}
+{% endif %}

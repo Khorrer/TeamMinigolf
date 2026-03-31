@@ -1,0 +1,21 @@
+{% extends "core/mobile/base_mobile.html" %}
+
+{% block title %}Home | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title="Home" subtitle="Dein Minigolf auf einen Blick" %}
+{% endblock %}
+
+{% block content %}
+  <article class="mobile-card">
+    <h2>Willkommen</h2>
+    <p>Diese mobile Ansicht nutzt eine Apple-konforme Bottom Tab Bar und sichere Safe-Area-Abstaende.</p>
+  </article>
+
+  <ul class="mobile-link-list">
+    <li><a class="mobile-link" href="{% url 'session_list' %}">Spieltage</a></li>
+    <li><a class="mobile-link" href="{% url 'session_create' %}">Neu starten</a></li>
+    <li><a class="mobile-link" href="{% url 'stats' %}">Statistiken</a></li>
+    <li><a class="mobile-link" href="{% url 'player_list' %}">Spieler</a></li>
+  </ul>
+{% endblock %}

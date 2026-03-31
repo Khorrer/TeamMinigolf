@@ -1,0 +1,15 @@
+{% extends "core/mobile/base_mobile.html" %}
+
+{% block title %}Profil | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title="Profil" subtitle="Spieler und Konto" %}
+{% endblock %}
+
+{% block content %}
+  <article class="mobile-card">
+    <h2>Spielerbereich</h2>
+    <p>Verwalte Spielerprofile und halte Teamdaten aktuell.</p>
+    <a class="mobile-link" href="{% url 'player_list' %}">Zur Spielerliste</a>
+  </article>
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends "core/base.html" %}
+{% block title %}Scoring – {{ session.course.name }} – #TeamMinigolf{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2><i class="bi bi-broadcast text-danger"></i> Live Scoring</h2>
+    <p class="text-muted mb-0">{{ session.course.name }} · {{ session.played_at }}</p>
+  </div>
+  <a href="{% url 'session_detail' session.pk %}" class="btn btn-outline-secondary btn-sm">Scorecard</a>
+</div>
+
+<div class="card mb-4 border-success shadow-sm" id="caddie-bot">
+  <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-robot"></i> Caddie Bot</span>
+  </div>
+  <div class="card-body text-center">
+    <h5 id="bot-question" class="mb-3 text-dark">Lade Spieler...</h5>
+    
+    <div id="bot-buttons" class="d-flex justify-content-center flex-wrap gap-2 mb-2">
+      {% for i in "1234567" %}
+      <button type="button" class="btn btn-outline-success bot-score-btn fw-bold" 
+              style="width: 48px; height: 48px; font-size: 1.1rem;" data-score="{{ i }}">{{ i }}</button>
+      {% endfor %}
+      
+      <button type="button" class="btn btn-danger bot-score-btn fw-bold px-3" 
+              style="height: 48px; font-size: 0.9rem;" data-score="8">
+        <i class="bi bi-x-circle"></i> Nicht geschafft!
+      </button>
+    </div>
+    
+    <div id="bot-done-msg" class="text-success mt-2 d-none">
+      <strong><i class="bi bi-check-circle-fill"></i> Alle Schläge sind erfasst!</strong>
+    </div>
+  </div>
+</div>
+<div class="table-responsive">
+  <table class="table table-bordered table-sm text-center scoring-table" id="scoring-table">
+    <thead class="table-success">
+      <tr>
+        <th class="text-start">Spieler</th>
+        {% for h in holes %}
+        <th>{{ h.hole_number }}</th>
+        {% endfor %}
+        <th>Σ</th>
+        <tr>
+        <th class="text-start">Par</th>
+        {% for h in holes %}
+        <th>{{ h.par }}</th>
+        {% endfor %}
+        <th>{{ totalPar }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for player in players %}
+      <tr data-player-id="{{ player.id }}">
+        <td class="text-start"><strong>{{ player.name }}</strong></td>
+        {% for hole in holes %}
+        <td>
+          <input type="number" class="form-control form-control-sm score-input text-center"
+            data-player="{{ player.id }}" data-hole="{{ hole.id }}" min="1" max="10"
+            style="width:50px; display:inline-block">
+        </td>
+        {% endfor %}
+        <td class="player-total" data-player="{{ player.id }}">–</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div id="save-status" class="text-muted small mt-2"></div>
+
+{% if session.status == 'live' %}
+<form method="post" action="{% url 'session_complete' session.pk %}" class="mt-3">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-success" onclick="return confirm('Spieltag abschließen?')">
+    <i class="bi bi-check-lg"></i> Spieltag abschließen
+  </button>
+</form>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const csrfToken = '{{ csrf_token }}';
+    const saveUrl = '{% url "score_save" session.pk %}';
+    const statusEl = document.getElementById('save-status');
+
+    // Pre-populate existing scores into inputs
+    const existingScores = JSON.parse('{{ existing_scores_json|escapejs }}');
+
+    // Set existing values from server data
+    document.querySelectorAll('.score-input').forEach(input => {
+      const key = input.dataset.player + '_' + input.dataset.hole;
+      if (existingScores[key]) {
+        input.value = existingScores[key];
+      }
+    });
+
+    // Calculate totals on load
+    updateAllTotals();
+
+    // Save on change
+    document.querySelectorAll('.score-input').forEach(input => {
+      let timeout;
+      input.addEventListener('change', function () {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => saveScore(this), 300);
+      });
+      input.addEventListener('keyup', function (e) {
+        if (e.key === 'Enter' || e.key === 'Tab') return;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => saveScore(this), 800);
+      });
+      // Move to next input on Enter
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const inputs = Array.from(document.querySelectorAll('.score-input'));
+          const idx = inputs.indexOf(this);
+          if (idx < inputs.length - 1) {
+            inputs[idx + 1].focus();
+            inputs[idx + 1].select();
+          }
+        }
+      });
+    });
+
+    function saveScore(input) {
+      const playerId = input.dataset.player;
+      const holeId = input.dataset.hole;
+      const strokes = input.value ? parseInt(input.value) : null;
+
+      if (strokes !== null && (strokes < 1 || strokes > 10)) {
+        input.classList.add('is-invalid');
+        return;
+      }
+      input.classList.remove('is-invalid');
+
+      statusEl.textContent = 'Speichern…';
+
+      fetch(saveUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({ player_id: parseInt(playerId), hole_id: parseInt(holeId), strokes: strokes }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            statusEl.textContent = 'Fehler: ' + data.error;
+            input.classList.add('is-invalid');
+          } else {
+            statusEl.textContent = 'Gespeichert ✓';
+            input.classList.add('is-valid');
+            setTimeout(() => input.classList.remove('is-valid'), 1000);
+            if (data.total !== undefined) {
+              document.querySelector(`.player-total[data-player="${playerId}"]`).textContent = data.total;
+            }
+          }
+        })
+        .catch(() => {
+          statusEl.textContent = 'Netzwerkfehler!';
+        });
+
+      updateAllTotals();
+      updateBotUI(); // Bot UI nach manueller Eingabe aktualisieren
+    }
+
+    function updateAllTotals() {
+      const players = new Set();
+      document.querySelectorAll('.score-input').forEach(i => players.add(i.dataset.player));
+      players.forEach(pid => {
+        let total = 0;
+        let hasAny = false;
+        document.querySelectorAll(`.score-input[data-player="${pid}"]`).forEach(i => {
+          if (i.value) { total += parseInt(i.value); hasAny = true; }
+        });
+        document.querySelector(`.player-total[data-player="${pid}"]`).textContent = hasAny ? total : '–';
+      });
+    }
+
+    // ==========================================
+    // CADDIE BOT LOGIK
+    // ==========================================
+    const botQuestionEl = document.getElementById('bot-question');
+    const botButtonsContainer = document.getElementById('bot-buttons');
+    const botDoneMsg = document.getElementById('bot-done-msg');
+
+    // 1. Hole alle Spieler und Löcher in der richtigen Reihenfolge
+    const orderedPlayers = [];
+    document.querySelectorAll('tbody tr[data-player-id]').forEach(tr => {
+      orderedPlayers.push({
+        id: tr.dataset.playerId,
+        name: tr.querySelector('strong').textContent.trim()
+      });
+    });
+
+    const orderedHoles = [];
+    if (orderedPlayers.length > 0) {
+      document.querySelectorAll(`.score-input[data-player="${orderedPlayers[0].id}"]`).forEach(input => {
+        orderedHoles.push(input.dataset.hole);
+      });
+    }
+
+    // 2. Finde den nächsten Spieler am aktuellen Loch (Loch für Loch)
+    function findNextTurn() {
+      for (let i = 0; i < orderedHoles.length; i++) {
+        for (let j = 0; j < orderedPlayers.length; j++) {
+          const input = document.querySelector(`.score-input[data-player="${orderedPlayers[j].id}"][data-hole="${orderedHoles[i]}"]`);
+          if (input && !input.value) {
+            return {
+              player: orderedPlayers[j],
+              holeId: orderedHoles[i],
+              holeNum: i + 1, // Loch 1, 2, 3...
+              input: input
+            };
+          }
+        }
+      }
+      return null; // Alles ausgefüllt
+    }
+
+    // 3. Bot UI basierend auf dem nächsten Zug aktualisieren
+    function updateBotUI() {
+      const next = findNextTurn();
+      if (next) {
+        botQuestionEl.innerHTML = `Loch ${next.holeNum}: Wie viele Schläge hat <strong class="text-success">${next.player.name}</strong> gebraucht?`;
+        botButtonsContainer.style.display = 'flex';
+        botDoneMsg.classList.add('d-none');
+      } else {
+        botQuestionEl.innerHTML = `Spieltag komplett!`;
+        botButtonsContainer.style.display = 'none';
+        botDoneMsg.classList.remove('d-none');
+      }
+    }
+
+    // 4. Button Klicks verarbeiten
+    document.querySelectorAll('.bot-score-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const score = this.dataset.score;
+        const next = findNextTurn();
+        if (next) {
+          next.input.value = score;
+          // Löse ein "change" Event auf dem Input aus.
+          // Dadurch greift automatisch deine bestehende `saveScore` Logik weiter oben!
+          next.input.dispatchEvent(new Event('change'));
+          updateBotUI(); // Direkt die nächste Frage stellen
+        }
+      });
+    });
+
+    // Bot direkt beim Seitenaufbau initiieren
+    updateBotUI();
+
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% if count and count > 0 %}
+<span class="tab-badge" aria-label="{{ count }} neue Eintraege">
+  {% if count > 99 %}99+{% else %}{{ count }}{% endif %}
+</span>
+{% endif %}
+
+<style>
+  .tab-badge {
+    position: absolute;
+    top: 2px;
+    right: calc(50% - 22px);
+    background: #FF3B30;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    line-height: 1;
+    box-sizing: border-box;
+  }
+</style>

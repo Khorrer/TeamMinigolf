@@ -32,4 +32,7 @@ class MobileDetectionMiddleware:
             user_agent = request.META.get("HTTP_USER_AGENT", "").lower()
             request.mobile = any(hint in user_agent for hint in MOBILE_USER_AGENT_HINTS)
 
+        # Template compatibility shim for request.user_agent.is_mobile
+        request.user_agent = type("UserAgentShim", (), {"is_mobile": request.mobile})()
+
         return self.get_response(request)

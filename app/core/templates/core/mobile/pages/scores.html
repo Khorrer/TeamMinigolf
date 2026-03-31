@@ -1,0 +1,15 @@
+{% extends "core/mobile/base_mobile.html" %}
+
+{% block title %}Scores | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title="Scores" subtitle="Statistiken und Trends" %}
+{% endblock %}
+
+{% block content %}
+  <article class="mobile-card">
+    <h2>Auswertungen</h2>
+    <p>Vergleiche Runden, erkenne Muster und springe direkt zur Statistikansicht.</p>
+    <a class="mobile-link" href="{% url 'stats' %}">Zu den Statistiken</a>
+  </article>
+{% endblock %}

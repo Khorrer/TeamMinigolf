@@ -1,0 +1,33 @@
+<header class="mobile-page-header">
+  <h1 class="mobile-page-header__title">{{ title|default:"#TeamMinigolf" }}</h1>
+  {% if subtitle %}
+    <p class="mobile-page-header__subtitle">{{ subtitle }}</p>
+  {% endif %}
+</header>
+
+<style>
+  .mobile-page-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 14px 16px 10px;
+    background: rgba(247, 247, 248, 0.88);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .mobile-page-header__title {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: -0.3px;
+    line-height: 1.15;
+    font-weight: 700;
+  }
+
+  .mobile-page-header__subtitle {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #6b6b70;
+  }
+</style>
