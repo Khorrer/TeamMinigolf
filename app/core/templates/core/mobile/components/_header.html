@@ -1,0 +1,90 @@
+<header class="mobile-page-header">
+  <div class="mobile-page-header__top">
+    <div>
+      <h1 class="mobile-page-header__title">{{ title|default:"#TeamMinigolf" }}</h1>
+      {% if subtitle %}
+        <p class="mobile-page-header__subtitle">{{ subtitle }}</p>
+      {% endif %}
+    </div>
+
+    {% if user.is_authenticated %}
+      <div class="mobile-page-header__actions" aria-label="Benutzeraktionen">
+        {% if user.is_staff %}
+          <a href="{% url 'admin:index' %}" class="mobile-page-header__action">Admin</a>
+        {% endif %}
+        <span class="mobile-page-header__user">{{ user.username }}</span>
+        <a class="nav-link" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right"></i></a>
+      </div>
+    {% endif %}
+  </div>
+</header>
+
+<style>
+  .mobile-page-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 14px 16px 10px;
+    background: rgba(247, 247, 248, 0.88);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .mobile-page-header__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .mobile-page-header__title {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: -0.3px;
+    line-height: 1.15;
+    font-weight: 700;
+  }
+
+  .mobile-page-header__subtitle {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #6b6b70;
+  }
+
+  .mobile-page-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .mobile-page-header__action,
+  .mobile-page-header__user {
+    min-height: 30px;
+    padding: 0 9px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    text-decoration: none;
+    white-space: nowrap;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.9);
+    color: #3a3a3c;
+  }
+
+  .mobile-page-header__action {
+    color: #0060c7;
+    border-color: rgba(0, 122, 255, 0.3);
+    background: rgba(0, 122, 255, 0.08);
+  }
+
+  .mobile-page-header__action--danger {
+    color: #b3261e;
+    border-color: rgba(255, 59, 48, 0.35);
+    background: rgba(255, 59, 48, 0.08);
+  }
+</style>

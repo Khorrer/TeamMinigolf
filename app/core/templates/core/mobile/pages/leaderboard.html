@@ -1,0 +1,427 @@
+{% extends "core/mobile/base_mobile.html" %}
+
+{% block title %}Leaderboard | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title="Leaderboard" subtitle="Metriken und Treppchen" %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .lb-mobile-card {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .lb-mobile-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .lb-mobile-sub {
+    margin: 3px 0 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .lb-mobile-podium {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    align-items: end;
+  }
+
+  .lb-mobile-slot {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #f8fafc;
+    min-height: 96px;
+    padding: 8px 6px;
+    text-align: center;
+    display: grid;
+    align-content: center;
+    gap: 3px;
+  }
+
+  .lb-mobile-slot--first {
+    min-height: 120px;
+    background: linear-gradient(180deg, #fff8da 0%, #ffe58f 100%);
+    border-color: rgba(245, 158, 11, 0.45);
+  }
+
+  .lb-mobile-rank {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 700;
+  }
+
+  .lb-mobile-value {
+    font-size: 15px;
+    font-weight: 800;
+    color: #065f46;
+  }
+
+  .lb-mobile-player {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .lb-mobile-empty {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  .lb-mobile-toggle {
+    margin-top: 8px;
+    width: 100%;
+    border: 0;
+    border-radius: 10px;
+    min-height: 38px;
+    background: #edf2f7;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  .lb-mobile-list {
+    display: none;
+    margin-top: 8px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.12);
+    padding-top: 6px;
+  }
+
+  .lb-mobile-list.is-open {
+    display: block;
+  }
+
+  .lb-mobile-row {
+    min-height: 38px;
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px dashed rgba(0, 0, 0, 0.09);
+  }
+
+  .lb-mobile-row:last-child {
+    border-bottom: 0;
+  }
+
+  .lb-mobile-index {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .lb-mobile-name {
+    border: 0;
+    background: transparent;
+    text-align: left;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .lb-mobile-score {
+    font-size: 13px;
+    font-weight: 800;
+    color: #047857;
+  }
+
+  .lb-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.54);
+    z-index: 2200;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .lb-overlay.is-open {
+    display: flex;
+  }
+
+  .lb-overlay-sheet {
+    width: min(100%, 760px);
+    max-height: 88dvh;
+    overflow: auto;
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 12px;
+  }
+
+  .lb-overlay-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .lb-overlay-kpis {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .lb-overlay-kpi {
+    border: 1px solid rgba(0, 0, 0, 0.09);
+    border-radius: 12px;
+    padding: 8px;
+    background: #f8fafc;
+  }
+
+  .lb-overlay-kpi small {
+    font-size: 11px;
+    color: #64748b;
+  }
+
+  .lb-overlay-kpi strong {
+    display: block;
+    margin-top: 2px;
+    font-size: 15px;
+  }
+
+  .lb-close {
+    border: 0;
+    border-radius: 999px;
+    width: 34px;
+    height: 34px;
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+  <form method="get" class="mobile-form" aria-label="Saisonfilter">
+    <label for="season" class="mobile-label">Saison</label>
+    <select id="season" name="season" class="mobile-select" onchange="this.form.submit()">
+      {% for s in seasons %}
+        <option value="{{ s }}" {% if current_season|add:"0" == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </form>
+
+  {% for metric in leaderboard_metrics %}
+    <article class="lb-mobile-card">
+      <h2 class="lb-mobile-title">{{ metric.title }}</h2>
+      <p class="lb-mobile-sub">{{ metric.description }} · {{ metric.unit }}</p>
+
+      <div class="lb-mobile-podium">
+        {% with second=metric.ranking|slice:"1:2"|first first=metric.ranking|slice:":1"|first third=metric.ranking|slice:"2:3"|first %}
+          <div class="lb-mobile-slot">
+            {% if second %}
+              <div class="lb-mobile-rank">#2</div>
+              <button type="button" class="lb-mobile-player js-player-trigger" data-player-id="{{ second.player_id }}">{{ second.player_name }}</button>
+              <div class="lb-mobile-value">
+                {% if metric.id == "win_percentage" %}{{ second.value|floatformat:1 }}%{% elif metric.id == "average_score" %}{{ second.value|floatformat:2 }}{% else %}{{ second.value|floatformat:0 }}{% endif %}
+              </div>
+            {% else %}
+              <div class="lb-mobile-empty">Kein Platz 2</div>
+            {% endif %}
+          </div>
+
+          <div class="lb-mobile-slot lb-mobile-slot--first">
+            {% if first %}
+              <div class="lb-mobile-rank">#1</div>
+              <button type="button" class="lb-mobile-player js-player-trigger" data-player-id="{{ first.player_id }}">{{ first.player_name }}</button>
+              <div class="lb-mobile-value">
+                {% if metric.id == "win_percentage" %}{{ first.value|floatformat:1 }}%{% elif metric.id == "average_score" %}{{ first.value|floatformat:2 }}{% else %}{{ first.value|floatformat:0 }}{% endif %}
+              </div>
+            {% else %}
+              <div class="lb-mobile-empty">Keine Daten</div>
+            {% endif %}
+          </div>
+
+          <div class="lb-mobile-slot">
+            {% if third %}
+              <div class="lb-mobile-rank">#3</div>
+              <button type="button" class="lb-mobile-player js-player-trigger" data-player-id="{{ third.player_id }}">{{ third.player_name }}</button>
+              <div class="lb-mobile-value">
+                {% if metric.id == "win_percentage" %}{{ third.value|floatformat:1 }}%{% elif metric.id == "average_score" %}{{ third.value|floatformat:2 }}{% else %}{{ third.value|floatformat:0 }}{% endif %}
+              </div>
+            {% else %}
+              <div class="lb-mobile-empty">Kein Platz 3</div>
+            {% endif %}
+          </div>
+        {% endwith %}
+      </div>
+
+      <button type="button" class="lb-mobile-toggle" data-toggle-target="lb-list-{{ metric.id }}">
+        <span>Vollstaendige Rangliste</span>
+        <i class="bi bi-chevron-down"></i>
+      </button>
+
+      <div id="lb-list-{{ metric.id }}" class="lb-mobile-list">
+        {% if metric.ranking %}
+          {% for entry in metric.ranking %}
+            <div class="lb-mobile-row">
+              <div class="lb-mobile-index">#{{ forloop.counter }}</div>
+              <button type="button" class="lb-mobile-name js-player-trigger" data-player-id="{{ entry.player_id }}">{{ entry.player_name }}</button>
+              <div class="lb-mobile-score">
+                {% if metric.id == "win_percentage" %}{{ entry.value|floatformat:1 }}%{% elif metric.id == "average_score" %}{{ entry.value|floatformat:2 }}{% else %}{{ entry.value|floatformat:0 }}{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="mobile-muted">Keine Daten fuer diese Saison.</p>
+        {% endif %}
+      </div>
+    </article>
+  {% endfor %}
+
+  <div id="playerStatsOverlay" class="lb-overlay" aria-hidden="true">
+    <div class="lb-overlay-sheet" role="dialog" aria-modal="true" aria-labelledby="lb-player-title">
+      <div class="lb-overlay-head">
+        <h2 id="lb-player-title" class="lb-mobile-title">Spielerprofil</h2>
+        <button type="button" class="lb-close" id="lbClose"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <p id="lbLoading" class="mobile-muted">Lade Statistiken...</p>
+      <div id="lbContent" style="display:none;">
+        <div class="lb-overlay-kpis">
+          <div class="lb-overlay-kpi"><small>Best Hole (Avg)</small><strong id="lbBestHole">-</strong></div>
+          <div class="lb-overlay-kpi"><small>Worst Hole (Avg)</small><strong id="lbWorstHole">-</strong></div>
+          <div class="lb-overlay-kpi"><small>Bounce-Back</small><strong id="lbBounceBack">-</strong></div>
+          <div class="lb-overlay-kpi"><small>Front 9 Avg</small><strong id="lbFront9">-</strong></div>
+          <div class="lb-overlay-kpi"><small>Back 9 Avg</small><strong id="lbBack9">-</strong></div>
+          <div class="lb-overlay-kpi"><small>Samples</small><strong id="lbSamples">-</strong></div>
+        </div>
+        <h3 class="mobile-title" style="margin-bottom:6px;">Score Distribution</h3>
+        <canvas id="lbDistChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  (() => {
+    const season = new URLSearchParams(window.location.search).get('season');
+    const apiTemplate = "{% url 'player_profile_stats' 0 %}";
+    const overlay = document.getElementById('playerStatsOverlay');
+    const closeBtn = document.getElementById('lbClose');
+    const loadingEl = document.getElementById('lbLoading');
+    const contentEl = document.getElementById('lbContent');
+    let chart;
+
+    function format(value, digits = 2) {
+      if (value === null || value === undefined) {
+        return '-';
+      }
+      return Number(value).toFixed(digits);
+    }
+
+    function setValue(id, value) {
+      document.getElementById(id).textContent = value;
+    }
+
+    function openOverlay() {
+      overlay.classList.add('is-open');
+      overlay.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeOverlay() {
+      overlay.classList.remove('is-open');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    function renderDistribution(payload) {
+      const ctx = document.getElementById('lbDistChart');
+      if (chart) {
+        chart.destroy();
+      }
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: payload.score_distribution.labels,
+          datasets: [{
+            data: payload.score_distribution.values,
+            backgroundColor: '#007a3d',
+            borderRadius: 8,
+            label: 'Anzahl',
+          }],
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, ticks: { precision: 0 } },
+          },
+        },
+      });
+    }
+
+    async function loadPlayerStats(playerId) {
+      loadingEl.textContent = 'Lade Statistiken...';
+      loadingEl.style.display = 'block';
+      contentEl.style.display = 'none';
+      openOverlay();
+
+      const params = season ? `?season=${encodeURIComponent(season)}` : '';
+      const url = apiTemplate.replace('/0/', `/${playerId}/`) + params;
+
+      try {
+        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!res.ok) {
+          throw new Error('Request failed');
+        }
+        const payload = await res.json();
+
+        document.getElementById('lb-player-title').textContent = `Spielerprofil - ${payload.player.name}`;
+        setValue('lbBestHole', payload.best_hole ? `Bahn ${payload.best_hole.hole_number} (${format(payload.best_hole.avg_strokes)})` : '-');
+        setValue('lbWorstHole', payload.worst_hole ? `Bahn ${payload.worst_hole.hole_number} (${format(payload.worst_hole.avg_strokes)})` : '-');
+        setValue('lbBounceBack', payload.bounce_back_rate !== null ? `${format(payload.bounce_back_rate)} (${payload.bounce_back_samples})` : '-');
+        setValue('lbFront9', payload.front9_avg_total !== null ? format(payload.front9_avg_total) : '-');
+        setValue('lbBack9', payload.back9_avg_total !== null ? format(payload.back9_avg_total) : '-');
+        setValue('lbSamples', String(payload.round_samples || 0));
+
+        renderDistribution(payload);
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'block';
+      } catch (err) {
+        loadingEl.textContent = 'Fehler beim Laden der Statistik.';
+      }
+    }
+
+    document.querySelectorAll('.lb-mobile-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.toggleTarget);
+        const icon = btn.querySelector('i');
+        target.classList.toggle('is-open');
+        icon.classList.toggle('bi-chevron-down');
+        icon.classList.toggle('bi-chevron-up');
+      });
+    });
+
+    document.querySelectorAll('.js-player-trigger').forEach((btn) => {
+      btn.addEventListener('click', () => loadPlayerStats(btn.dataset.playerId));
+    });
+
+    closeBtn.addEventListener('click', closeOverlay);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeOverlay();
+      }
+    });
+  })();
+</script>
+{% endblock %}

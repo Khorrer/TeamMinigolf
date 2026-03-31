@@ -1,0 +1,58 @@
+{% extends "core/mobile/base_mobile.html" %}
+
+{% block title %}Spielen | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title="Spielen" subtitle="Runden und laufende Spiele" %}
+{% endblock %}
+
+{% block content %}
+  <div class="mobile-toolbar">
+    <a href="{% url 'session_create' %}" class="mobile-primary-btn"><i class="bi bi-plus-lg"></i> Neuer Spieltag</a>
+  </div>
+
+  <div class="mobile-filter-row" aria-label="Statusfilter">
+    <a href="{% url 'session_list' %}{% if current_season %}?season={{ current_season }}{% endif %}" class="mobile-chip {% if not current_status %}mobile-chip--active{% endif %}">Alle</a>
+    <a href="{% url 'session_list' %}?status=live{% if current_season %}&season={{ current_season }}{% endif %}" class="mobile-chip {% if current_status == 'live' %}mobile-chip--active{% endif %}">Live</a>
+    <a href="{% url 'session_list' %}?status=completed{% if current_season %}&season={{ current_season }}{% endif %}" class="mobile-chip {% if current_status == 'completed' %}mobile-chip--active{% endif %}">Abgeschlossen</a>
+  </div>
+
+  {% if seasons %}
+    <form method="get" class="mobile-form" aria-label="Saisonfilter">
+      {% if current_status %}
+        <input type="hidden" name="status" value="{{ current_status }}">
+      {% endif %}
+      <select name="season" class="mobile-select" onchange="this.form.submit()">
+        <option value="">Alle Saisons</option>
+        {% for s in seasons %}
+          <option value="{{ s }}" {% if current_season|add:"0" == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  {% endif %}
+
+  <ul class="mobile-list">
+    {% for s in sessions %}
+      <li>
+        <a href="{% if s.status == 'live' %}{% url 'scoring' s.pk %}{% else %}{% url 'session_detail' s.pk %}{% endif %}" class="mobile-list-item {% if s.status == 'live' %}mobile-list-item--warn{% endif %}">
+          <div>
+            <p class="mobile-title">{{ s.course.name }}</p>
+            <p class="mobile-subtitle">{{ s.played_at }}</p>
+            <p class="mobile-meta">{% for p in s.players.all %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+          </div>
+          {% if s.status == 'live' %}
+            <span class="mobile-pill mobile-pill--warn">LIVE</span>
+          {% else %}
+            <span class="mobile-pill mobile-pill--success">{{ s.season }}</span>
+          {% endif %}
+        </a>
+      </li>
+    {% empty %}
+      <li>
+        <article class="mobile-card">
+          <p class="mobile-muted">Keine Spieltage gefunden.</p>
+        </article>
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}

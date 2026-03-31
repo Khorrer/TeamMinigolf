@@ -1,0 +1,38 @@
+{% extends "core/mobile/base_mobile.html" %}
+
+{% block title %}Profil | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title="Profil" subtitle="Spieler und Konto" %}
+{% endblock %}
+
+{% block content %}
+  <div class="mobile-toolbar">
+    <a href="{% url 'player_create' %}" class="mobile-primary-btn"><i class="bi bi-person-plus"></i> Neuer Spieler</a>
+  </div>
+
+  <ul class="mobile-list">
+    {% for p in players %}
+      <li>
+        <article class="mobile-card">
+          <p class="mobile-title">{{ p.name }}</p>
+          <p class="mobile-meta">Spieltage: {{ p.session_count }} · Ø Schlaege: {% if p.avg_strokes %}{{ p.avg_strokes|floatformat:1 }}{% else %}–{% endif %}</p>
+          <div class="mobile-toolbar" style="margin: 8px 0 0; justify-content: space-between;">
+            {% if p.active %}
+              <span class="mobile-pill mobile-pill--success">Aktiv</span>
+            {% else %}
+              <span class="mobile-pill mobile-pill--neutral">Inaktiv</span>
+            {% endif %}
+            <a href="{% url 'player_edit' p.pk %}" class="mobile-chip">Bearbeiten</a>
+          </div>
+        </article>
+      </li>
+    {% empty %}
+      <li>
+        <article class="mobile-card">
+          <p class="mobile-muted">Noch keine Spieler angelegt.</p>
+        </article>
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}

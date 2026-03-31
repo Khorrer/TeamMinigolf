@@ -1,0 +1,435 @@
+{% extends "core/base.html" %}
+{% block title %}Leaderboard – #TeamMinigolf{% endblock %}
+{% block extra_css %}
+<style>
+  .lb-page {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .lb-header-card {
+    border: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #0f5132 0%, #198754 45%, #3cb371 100%);
+    color: #fff;
+    box-shadow: 0 14px 34px rgba(18, 56, 36, 0.28);
+  }
+
+  .lb-header-card .form-select {
+    max-width: 190px;
+    border: 0;
+  }
+
+  .lb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+  }
+
+  .metric-card {
+    border: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 12px 26px rgba(16, 24, 40, 0.09);
+  }
+
+  .metric-head {
+    padding: 1rem 1rem 0.4rem;
+  }
+
+  .metric-head h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .metric-sub {
+    margin: 0.3rem 0 0;
+    color: #5f6b7a;
+    font-size: 0.86rem;
+  }
+
+  .podium {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem;
+    align-items: end;
+    padding: 0.75rem 1rem 1rem;
+  }
+
+  .podium-slot {
+    border-radius: 12px;
+    background: #f6f8fb;
+    border: 1px solid #e5e8ee;
+    padding: 0.65rem 0.5rem;
+    text-align: center;
+    min-height: 112px;
+    display: grid;
+    align-content: center;
+    gap: 0.25rem;
+  }
+
+  .podium-slot--first {
+    min-height: 142px;
+    background: linear-gradient(180deg, #fff7d7 0%, #ffe082 100%);
+    border-color: #ffd54f;
+  }
+
+  .podium-rank {
+    font-weight: 800;
+    font-size: 0.86rem;
+    color: #5f6b7a;
+  }
+
+  .podium-slot--first .podium-rank {
+    color: #7a5d00;
+  }
+
+  .podium-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+
+  .podium-player {
+    border: 0;
+    background: transparent;
+    font-weight: 700;
+    color: #1f2937;
+    padding: 0;
+  }
+
+  .podium-empty {
+    color: #8a94a4;
+    font-size: 0.88rem;
+  }
+
+  .metric-toggle {
+    width: 100%;
+    border: 0;
+    border-top: 1px solid #ecf0f5;
+    background: #f8fafc;
+    color: #334155;
+    padding: 0.65rem 0.9rem;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .metric-list {
+    display: none;
+    border-top: 1px solid #ecf0f5;
+    padding: 0.5rem 0.9rem 0.85rem;
+    background: #fff;
+  }
+
+  .metric-list.is-open {
+    display: block;
+  }
+
+  .rank-row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 42px;
+    border-bottom: 1px dashed #edf1f5;
+    font-size: 0.93rem;
+  }
+
+  .rank-row:last-child {
+    border-bottom: 0;
+  }
+
+  .rank-index {
+    font-weight: 800;
+    color: #64748b;
+  }
+
+  .rank-player {
+    border: 0;
+    background: transparent;
+    text-align: left;
+    color: #0f172a;
+    padding: 0;
+    font-weight: 600;
+  }
+
+  .rank-value {
+    font-weight: 800;
+    color: #0b6;
+  }
+
+  .player-modal-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .player-kpi {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.6rem;
+  }
+
+  .player-kpi small {
+    color: #64748b;
+    font-size: 0.74rem;
+  }
+
+  .player-kpi strong {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 1.1rem;
+  }
+
+  @media (max-width: 991px) {
+    .player-modal-kpis {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<section class="lb-page">
+  <article class="card lb-header-card">
+    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <h2 class="mb-1"><i class="bi bi-trophy"></i> Performance Leaderboard</h2>
+        <p class="mb-0 opacity-75">Treppchen pro Metrik, mit Klick auf vollstaendige Rangliste und Spielerprofil.</p>
+      </div>
+      <form method="get" class="d-flex align-items-center gap-2">
+        <label for="season" class="fw-semibold">Saison</label>
+        <select id="season" name="season" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for s in seasons %}
+          <option value="{{ s }}" {% if current_season|add:"0" == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+  </article>
+
+  <section class="lb-grid">
+    {% for metric in leaderboard_metrics %}
+    <article class="metric-card" data-metric-card>
+      <header class="metric-head">
+        <h3>{{ metric.title }}</h3>
+        <p class="metric-sub">{{ metric.description }} · {{ metric.unit }}</p>
+      </header>
+
+      <div class="podium">
+        {% with second=metric.ranking|slice:"1:2"|first first=metric.ranking|slice:":1"|first third=metric.ranking|slice:"2:3"|first %}
+        <div class="podium-slot podium-slot--second">
+          {% if second %}
+            <div class="podium-rank">#2</div>
+            <button type="button" class="podium-player js-player-trigger" data-player-id="{{ second.player_id }}">{{ second.player_name }}</button>
+            <div class="podium-value">
+              {% if metric.id == "win_percentage" %}{{ second.value|floatformat:1 }}%{% elif metric.id == "average_score" %}{{ second.value|floatformat:2 }}{% else %}{{ second.value|floatformat:0 }}{% endif %}
+            </div>
+          {% else %}
+            <div class="podium-empty">Kein Platz 2</div>
+          {% endif %}
+        </div>
+
+        <div class="podium-slot podium-slot--first">
+          {% if first %}
+            <div class="podium-rank">#1</div>
+            <button type="button" class="podium-player js-player-trigger" data-player-id="{{ first.player_id }}">{{ first.player_name }}</button>
+            <div class="podium-value">
+              {% if metric.id == "win_percentage" %}{{ first.value|floatformat:1 }}%{% elif metric.id == "average_score" %}{{ first.value|floatformat:2 }}{% else %}{{ first.value|floatformat:0 }}{% endif %}
+            </div>
+          {% else %}
+            <div class="podium-empty">Keine Daten</div>
+          {% endif %}
+        </div>
+
+        <div class="podium-slot podium-slot--third">
+          {% if third %}
+            <div class="podium-rank">#3</div>
+            <button type="button" class="podium-player js-player-trigger" data-player-id="{{ third.player_id }}">{{ third.player_name }}</button>
+            <div class="podium-value">
+              {% if metric.id == "win_percentage" %}{{ third.value|floatformat:1 }}%{% elif metric.id == "average_score" %}{{ third.value|floatformat:2 }}{% else %}{{ third.value|floatformat:0 }}{% endif %}
+            </div>
+          {% else %}
+            <div class="podium-empty">Kein Platz 3</div>
+          {% endif %}
+        </div>
+        {% endwith %}
+      </div>
+
+      <button type="button" class="metric-toggle" data-toggle-target="metric-{{ metric.id }}">
+        <span>Vollstaendige Rangliste</span>
+        <i class="bi bi-chevron-down"></i>
+      </button>
+
+      <div id="metric-{{ metric.id }}" class="metric-list">
+        {% if metric.ranking %}
+          {% for entry in metric.ranking %}
+          <div class="rank-row">
+            <div class="rank-index">#{{ forloop.counter }}</div>
+            <button type="button" class="rank-player js-player-trigger" data-player-id="{{ entry.player_id }}">{{ entry.player_name }}</button>
+            <div class="rank-value">
+              {% if metric.id == "win_percentage" %}{{ entry.value|floatformat:1 }}%{% elif metric.id == "average_score" %}{{ entry.value|floatformat:2 }}{% else %}{{ entry.value|floatformat:0 }}{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted mb-0">Keine Daten fuer diese Saison vorhanden.</p>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </section>
+</section>
+
+<div class="modal fade" id="playerStatsModal" tabindex="-1" aria-labelledby="playerStatsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="playerStatsModalLabel">Spielerprofil</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="playerStatsLoading" class="text-muted">Lade Statistiken...</div>
+        <div id="playerStatsContent" class="d-none">
+          <div class="player-modal-kpis mb-3">
+            <div class="player-kpi">
+              <small>Best Hole (Avg)</small>
+              <strong id="kpiBestHole">-</strong>
+            </div>
+            <div class="player-kpi">
+              <small>Worst Hole (Avg)</small>
+              <strong id="kpiWorstHole">-</strong>
+            </div>
+            <div class="player-kpi">
+              <small>Bounce-Back-Rate</small>
+              <strong id="kpiBounceBack">-</strong>
+            </div>
+            <div class="player-kpi">
+              <small>Front 9 Avg Total</small>
+              <strong id="kpiFront9">-</strong>
+            </div>
+            <div class="player-kpi">
+              <small>Back 9 Avg Total</small>
+              <strong id="kpiBack9">-</strong>
+            </div>
+            <div class="player-kpi">
+              <small>Round Samples</small>
+              <strong id="kpiSamples">-</strong>
+            </div>
+          </div>
+          <h6 class="mb-2">Score Distribution</h6>
+          <canvas id="scoreDistributionChart" height="110"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  (() => {
+    const modalEl = document.getElementById('playerStatsModal');
+    const bsModal = new bootstrap.Modal(modalEl);
+    const loadingEl = document.getElementById('playerStatsLoading');
+    const contentEl = document.getElementById('playerStatsContent');
+    const apiTemplate = "{% url 'player_profile_stats' 0 %}";
+    const season = new URLSearchParams(window.location.search).get('season');
+    let chart;
+
+    function formatValue(value, digits = 2) {
+      if (value === null || value === undefined) {
+        return '-';
+      }
+      return Number(value).toFixed(digits);
+    }
+
+    function setText(id, value) {
+      document.getElementById(id).textContent = value;
+    }
+
+    function renderChart(payload) {
+      const ctx = document.getElementById('scoreDistributionChart');
+      if (chart) {
+        chart.destroy();
+      }
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: payload.score_distribution.labels,
+          datasets: [{
+            label: 'Anzahl Bahnen',
+            data: payload.score_distribution.values,
+            borderRadius: 8,
+            backgroundColor: '#198754',
+          }],
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, ticks: { precision: 0 } },
+          },
+        },
+      });
+    }
+
+    async function openPlayerModal(playerId) {
+      loadingEl.classList.remove('d-none');
+      contentEl.classList.add('d-none');
+      bsModal.show();
+
+      const params = season ? `?season=${encodeURIComponent(season)}` : '';
+      const url = apiTemplate.replace('/0/', `/${playerId}/`) + params;
+
+      try {
+        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!response.ok) {
+          throw new Error('Statistik konnte nicht geladen werden');
+        }
+        const payload = await response.json();
+
+        document.getElementById('playerStatsModalLabel').textContent = `Spielerprofil - ${payload.player.name}`;
+        setText(
+          'kpiBestHole',
+          payload.best_hole ? `Bahn ${payload.best_hole.hole_number} (${formatValue(payload.best_hole.avg_strokes)})` : '-'
+        );
+        setText(
+          'kpiWorstHole',
+          payload.worst_hole ? `Bahn ${payload.worst_hole.hole_number} (${formatValue(payload.worst_hole.avg_strokes)})` : '-'
+        );
+        setText(
+          'kpiBounceBack',
+          payload.bounce_back_rate !== null ? `${formatValue(payload.bounce_back_rate)} (${payload.bounce_back_samples})` : '-'
+        );
+        setText('kpiFront9', payload.front9_avg_total !== null ? formatValue(payload.front9_avg_total) : '-');
+        setText('kpiBack9', payload.back9_avg_total !== null ? formatValue(payload.back9_avg_total) : '-');
+        setText('kpiSamples', String(payload.round_samples || 0));
+
+        renderChart(payload);
+        loadingEl.classList.add('d-none');
+        contentEl.classList.remove('d-none');
+      } catch (error) {
+        loadingEl.textContent = 'Fehler beim Laden der Spielerstatistiken.';
+      }
+    }
+
+    document.querySelectorAll('.metric-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.toggleTarget);
+        const icon = btn.querySelector('i');
+        target.classList.toggle('is-open');
+        icon.classList.toggle('bi-chevron-down');
+        icon.classList.toggle('bi-chevron-up');
+      });
+    });
+
+    document.querySelectorAll('.js-player-trigger').forEach((btn) => {
+      btn.addEventListener('click', () => openPlayerModal(btn.dataset.playerId));
+    });
+  })();
+</script>
+{% endblock %}

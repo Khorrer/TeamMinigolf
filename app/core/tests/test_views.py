@@ -76,6 +76,15 @@ class ScoringTest(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["status"], "saved")
+        self.assertIsNotNone(data.get("best_hole_strokes"))
+        self.assertTrue(
+            Score.objects.filter(
+                session=self.session,
+                player__name="Best",
+                hole=hole,
+                strokes=3,
+            ).exists()
+        )
 
     def test_score_save_invalid_player(self):
         hole = self.course.holes.first()
@@ -125,8 +134,8 @@ class AIScoreImportTest(TestCase):
         self.assertEqual(response.status_code, 200)
         session = Session.objects.get(course=self.course, played_at="2026-03-10")
         self.assertEqual(session.status, Session.Status.COMPLETED)
-        self.assertEqual(session.players.count(), 2)
-        self.assertEqual(Score.objects.filter(session=session).count(), 36)
+        self.assertEqual(session.players.count(), 3)
+        self.assertEqual(Score.objects.filter(session=session).count(), 54)
 
     def test_import_rejects_unknown_player(self):
         payload = {
@@ -146,3 +155,46 @@ class AIScoreImportTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Players do not exist")
         self.assertEqual(Session.objects.count(), 0)
+
+
+class LeaderboardMetricsTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("metricuser", password="testpass123")
+        self.client.login(username="metricuser", password="testpass123")
+
+        self.course = Course.objects.create(name="MetricPark", holes_count=18)
+        self.alice = Player.objects.create(name="Alice")
+        self.bob = Player.objects.create(name="Bob")
+
+        self.session = Session.objects.create(
+            course=self.course,
+            played_at="2026-03-01",
+            season=2026,
+            status=Session.Status.COMPLETED,
+        )
+        SessionPlayer.objects.create(session=self.session, player=self.alice)
+        SessionPlayer.objects.create(session=self.session, player=self.bob)
+
+        holes = list(self.course.holes.order_by("hole_number"))
+        for hole in holes:
+            Score.objects.create(session=self.session, player=self.alice, hole=hole, strokes=2)
+            Score.objects.create(session=self.session, player=self.bob, hole=hole, strokes=3)
+
+    def test_leaderboard_renders_metric_cards(self):
+        response = self.client.get(reverse("leaderboard"), {"season": 2026})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Average Score")
+        self.assertContains(response, "Win Percentage")
+        self.assertContains(response, "Hole-in-One King")
+        self.assertContains(response, "All-Time Low")
+
+    def test_player_profile_stats_api(self):
+        response = self.client.get(
+            reverse("player_profile_stats", args=[self.alice.pk]),
+            {"season": 2026},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["player"]["name"], "Alice")
+        self.assertIn("score_distribution", data)
+        self.assertEqual(len(data["score_distribution"]["labels"]), 7)

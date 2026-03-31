@@ -1,0 +1,14 @@
+{% extends "core/mobile/base_mobile.html" %}
+
+{% block title %}About | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title="About" subtitle="Was diese App kann" %}
+{% endblock %}
+
+{% block content %}
+  <article class="mobile-card">
+    <h2>TeamMinigolf</h2>
+    <p>Runden verwalten, Scores erfassen und Statistiken verfolgen. Die Navigation bleibt dauerhaft unten sichtbar.</p>
+  </article>
+{% endblock %}

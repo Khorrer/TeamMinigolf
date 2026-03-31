@@ -15,7 +15,9 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 
+from .best_player import BEST_PLAYER_NAME, ensure_best_player_in_session, recompute_best_scores_for_session
 from .forms import AIScoreImportForm, CourseForm, PlayerForm, SessionCreateForm
+from .leaderboard_metrics import build_leaderboard_metrics, build_player_profile_stats
 from .models import AuditLog, Course, Hole, Player, Score, Session, SessionPlayer
 
 
@@ -106,7 +108,7 @@ def dashboard(request):
 # ---------------------------------------------------------------------------
 @login_required
 def player_list(request):
-    players = Player.objects.annotate(
+    players = Player.objects.exclude(name__iexact=BEST_PLAYER_NAME).annotate(
         session_count=Count("sessions"),
         avg_strokes=Avg("scores__strokes"),
     )
@@ -125,6 +127,9 @@ def player_create(request):
 @login_required
 def player_edit(request, pk):
     player = get_object_or_404(Player, pk=pk)
+    if player.name.casefold() == BEST_PLAYER_NAME.casefold():
+        messages.error(request, "'Best' wird automatisch verwaltet und kann nicht bearbeitet werden.")
+        return redirect("player_list")
     form = PlayerForm(request.POST or None, instance=player)
     if form.is_valid():
         form.save()
@@ -207,7 +212,8 @@ def session_create(request):
             selected_players = form.cleaned_data["players"]
             random_players = selected_players.order_by('?') 
             for player in random_players:
-                SessionPlayer.objects.create(session=session, player=player)            
+                SessionPlayer.objects.create(session=session, player=player)
+            ensure_best_player_in_session(session)
             return redirect("scoring", pk=session.pk)
     else:
         form = SessionCreateForm(initial={
@@ -272,6 +278,8 @@ def ai_import(request):
                                 ]
                             )
 
+                            ensure_best_player_in_session(session)
+
                             score_rows = []
                             for player, scores in resolved_players:
                                 for index, strokes in enumerate(scores):
@@ -284,6 +292,7 @@ def ai_import(request):
                                         )
                                     )
                             Score.objects.bulk_create(score_rows)
+                            recompute_best_scores_for_session(session)
 
                         messages.success(
                             request,
@@ -293,7 +302,11 @@ def ai_import(request):
     else:
         form = AIScoreImportForm()
 
-    existing_players = Player.objects.filter(active=True).order_by("name")
+    existing_players = (
+        Player.objects.filter(active=True)
+        .exclude(name__iexact=BEST_PLAYER_NAME)
+        .order_by("name")
+    )
 
     return render(
         request,
@@ -312,9 +325,14 @@ def session_detail(request, pk):
         Session.objects.select_related("course").prefetch_related("players", "scores__hole", "scores__player"),
         pk=pk,
     )
+    recompute_best_scores_for_session(session)
+    session = get_object_or_404(
+        Session.objects.select_related("course").prefetch_related("players", "scores__hole", "scores__player"),
+        pk=pk,
+    )
     holes = session.course.holes.order_by("hole_number")
     players = session.players.all()
-    totalPar = sum(h.par for h in holes)
+    totalPar = sum((h.par or 0) for h in holes)
 
     # Build score grid: {player_id: {hole_id: strokes}}
     score_map = {}
@@ -367,13 +385,22 @@ def scoring(request, pk):
         Session.objects.select_related("course").prefetch_related("players"),
         pk=pk,
     )
+    best_player = recompute_best_scores_for_session(session)
     holes = session.course.holes.order_by("hole_number")
-    players = session.players.all().order_by('sessionplayer__id')
-    totalPar = sum(h.par for h in holes)
+    players = session.players.exclude(pk=best_player.pk).all().order_by('sessionplayer__id')
+    totalPar = sum((h.par or 0) for h in holes)
     existing_scores = {
         (s.player_id, s.hole_id): s.strokes
         for s in session.scores.all()
     }
+    best_scores = [
+        {
+            "hole_id": h.id,
+            "strokes": existing_scores.get((best_player.id, h.id)),
+        }
+        for h in holes
+    ]
+    best_total = sum((item["strokes"] or 0) for item in best_scores)
     # JSON-serializable version for JavaScript: {"playerId_holeId": strokes}
     scores_json = json.dumps({
         f"{pid}_{hid}": strokes for (pid, hid), strokes in existing_scores.items()
@@ -385,6 +412,8 @@ def scoring(request, pk):
         "existing_scores": existing_scores,
         "existing_scores_json": scores_json,
         "totalPar": totalPar,
+        "best_scores": best_scores,
+        "best_total": best_total,
     })
 
 
@@ -392,6 +421,7 @@ def scoring(request, pk):
 @require_POST
 def score_save(request, session_pk):
     session = get_object_or_404(Session, pk=session_pk)
+    best_player = ensure_best_player_in_session(session)
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -403,6 +433,15 @@ def score_save(request, session_pk):
 
     if not all([player_id, hole_id]):
         return JsonResponse({"error": "Missing player_id or hole_id"}, status=400)
+
+    try:
+        player_id = int(player_id)
+        hole_id = int(hole_id)
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Invalid player_id or hole_id"}, status=400)
+
+    if player_id == best_player.id:
+        return JsonResponse({"error": "Best player is computed automatically"}, status=400)
 
     # Validate player is part of session
     if not session.session_players.filter(player_id=player_id).exists():
@@ -426,7 +465,22 @@ def score_save(request, session_pk):
                 object_id=0,
                 details={"session": session.pk, "player": player_id, "hole": hole_id},
             )
-        return JsonResponse({"status": "deleted"})
+        recompute_best_scores_for_session(session, hole_ids=[hole_id])
+        best_hole_strokes = (
+            Score.objects.filter(
+                session=session,
+                player=best_player,
+                hole_id=hole_id,
+            )
+            .values_list("strokes", flat=True)
+            .first()
+        )
+        best_total = session.scores.filter(player=best_player).aggregate(t=Sum("strokes"))["t"] or 0
+        return JsonResponse({
+            "status": "deleted",
+            "best_hole_strokes": best_hole_strokes,
+            "best_total": best_total,
+        })
 
     strokes = int(strokes)
     if strokes < 1 or strokes > 10:
@@ -448,7 +502,23 @@ def score_save(request, session_pk):
 
     # Return updated total for player
     total = session.scores.filter(player_id=player_id).aggregate(t=Sum("strokes"))["t"] or 0
-    return JsonResponse({"status": "saved", "total": total})
+    recompute_best_scores_for_session(session, hole_ids=[hole_id])
+    best_hole_strokes = (
+        Score.objects.filter(
+            session=session,
+            player=best_player,
+            hole_id=hole_id,
+        )
+        .values_list("strokes", flat=True)
+        .first()
+    )
+    best_total = session.scores.filter(player=best_player).aggregate(t=Sum("strokes"))["t"] or 0
+    return JsonResponse({
+        "status": "saved",
+        "total": total,
+        "best_hole_strokes": best_hole_strokes,
+        "best_total": best_total,
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -459,7 +529,7 @@ def stats_overview(request):
     season = request.GET.get("season")
     course_id = request.GET.get("course")
 
-    score_qs = Score.objects.all()
+    score_qs = Score.objects.exclude(player__name__iexact=BEST_PLAYER_NAME)
     if season and season.isdigit():
         score_qs = score_qs.filter(session__season=int(season))
     if course_id and course_id.isdigit():
@@ -502,26 +572,28 @@ def stats_overview(request):
 
 @login_required
 def leaderboard(request):
-    season = request.GET.get("season", str(date.today().year))
+    season_raw = request.GET.get("season", str(date.today().year))
+    season = int(season_raw) if season_raw and season_raw.isdigit() else None
 
-    score_qs = Score.objects.all()
-    if season and season.isdigit():
-        score_qs = score_qs.filter(session__season=int(season))
-
-    leaderboard_data = (
-        score_qs.values("player__id", "player__name")
-        .annotate(
-            avg_strokes=Avg("strokes"),
-            total_rounds=Count("session", distinct=True),
-            total_strokes=Sum("strokes"),
-        )
-        .order_by("avg_strokes")
-    )
+    leaderboard_metrics = build_leaderboard_metrics(season=season)
 
     seasons = Session.objects.values_list("season", flat=True).distinct().order_by("-season")
 
     return render(request, "core/leaderboard.html", {
-        "leaderboard": leaderboard_data,
+        "leaderboard_metrics": leaderboard_metrics,
         "seasons": seasons,
-        "current_season": season,
+        "current_season": season_raw,
     })
+
+
+@login_required
+def player_profile_stats(request, pk):
+    season_raw = request.GET.get("season")
+    season = int(season_raw) if season_raw and season_raw.isdigit() else None
+    player = get_object_or_404(Player, pk=pk)
+
+    if player.name.casefold() == BEST_PLAYER_NAME.casefold():
+        return JsonResponse({"error": "Best player is computed automatically"}, status=400)
+
+    payload = build_player_profile_stats(player, season=season)
+    return JsonResponse(payload)
