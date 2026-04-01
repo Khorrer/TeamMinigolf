@@ -8,7 +8,8 @@ urlpatterns = [
     path("health/", views.health_check, name="health"),
     # Auth
     path("login/", LoginView.as_view(template_name="core/login.html"), name="login"),
-    path("logout/", LogoutView.as_view(), name="logout"),
+    path("logout/", views.logout, name="logout"),
+    path('signup/', views.signup, name='signup'),
     # Dashboard
     path("", views.dashboard, name="dashboard"),
     # Players
@@ -23,6 +24,7 @@ urlpatterns = [
     # Sessions
     path("sessions/", views.session_list, name="session_list"),
     path("sessions/create/", views.session_create, name="session_create"),
+    path("games/ai-import", views.ai_import, name="ai_import"),
     path("sessions/<int:pk>/", views.session_detail, name="session_detail"),
     path("sessions/<int:pk>/complete/", views.session_complete, name="session_complete"),
     # Scoring
@@ -30,5 +32,5 @@ urlpatterns = [
     path("sessions/<int:session_pk>/score/", views.score_save, name="score_save"),
     # Stats
     path("stats/", views.stats_overview, name="stats"),
-    path("leaderboard/", views.leaderboard, name="leaderboard"),
+    path("leaderboard/", views.leaderboard, name="leaderboard")
 ]

@@ -1,14 +1,56 @@
 import json
+import random
 from datetime import date
 
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Avg, Count, Min, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from django.contrib import messages
+from .models import Course
+from django.db import models 
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
+from django.contrib.auth.forms import UserCreationForm
 
-from .forms import CourseForm, PlayerForm, SessionCreateForm
+from .forms import AIScoreImportForm, CourseForm, PlayerForm, SessionCreateForm
 from .models import AuditLog, Course, Hole, Player, Score, Session, SessionPlayer
+
+
+AI_SCORE_IMPORT_PROMPT = """You are helping to digitize a minigolf scorecard.
+
+I will upload a photo of a minigolf scorecard.
+
+Extract the information and return ONLY valid JSON.
+
+Format:
+
+{
+\"course\": \"Course Name\",
+\"date\": \"YYYY-MM-DD\",
+\"players\": [
+{
+\"name\": \"Player Name\",
+\"scores\": [2,3,1,4,2,3,2,3,4,2,3,2,1,3,2,4,3,2]
+}
+]
+}
+
+Rules:
+
+* detect all players
+* take the Date from the scorecard or use today's date if not available
+* each player must have 18 scores
+* ask for numbers if handwriting is unclear and under 75% confidence and for the specific hole (e.g. "Player X, hole 5")
+* do not add explanations
+* output JSON only
+* try to match course name to existing courses in our system, but if not sure, just return the name as it appears on the scorecard
+* existing courses: 
+    - Gartengolfanlage Eppelheim
+* try to match player names to existing players in our system, but if not sure, just return the name as it appears on the scorecard
+* existing Players: """
 
 
 # ---------------------------------------------------------------------------
@@ -16,6 +58,27 @@ from .models import AuditLog, Course, Hole, Player, Score, Session, SessionPlaye
 # ---------------------------------------------------------------------------
 def health_check(request):
     return HttpResponse("ok")
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+class BootstrapSignUpForm(UserCreationForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.update({'class': 'form-control'})
+
+def signup(request):
+    if request.method == 'POST':
+        form = BootstrapSignUpForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('session_list') # Leitet zur Übersicht weiter
+    else:
+        form = BootstrapSignUpForm()
+    return render(request, 'core/signup.html', {'form': form})
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +140,6 @@ def course_list(request):
     courses = Course.objects.annotate(session_count=Count("sessions"))
     return render(request, "core/course_list.html", {"courses": courses})
 
-
 @login_required
 def course_create(request):
     form = CourseForm(request.POST or None)
@@ -96,13 +158,22 @@ def course_detail(request, pk):
 
 @login_required
 def course_edit(request, pk):
-    course = get_object_or_404(Course, pk=pk)
-    form = CourseForm(request.POST or None, instance=course)
-    if form.is_valid():
-        form.save()
-        return redirect("course_detail", pk=pk)
-    return render(request, "core/course_form.html", {"form": form, "title": "Anlage bearbeiten"})
+    course = get_object_or_404(Course.objects.prefetch_related("holes"), pk=pk)
+    # Hole alle existierenden Bahnen oder erstelle sie, falls nötig
+    holes = course.holes.annotate(avg_strokes=Avg("scores__strokes"))
+    
+    if request.method == "POST":
+        for hole in holes:
+            par_value = request.POST.get(f'par_{hole.hole_number}')
+            if par_value:
+                hole.par = par_value
+                hole.save()
+        return redirect('course_list')
 
+    return render(request, 'core/course_pars.html', {
+        'course': course,
+        'holes': holes
+    })
 
 # ---------------------------------------------------------------------------
 # Sessions
@@ -133,8 +204,10 @@ def session_create(request):
             session = form.save(commit=False)
             session.created_by = request.user
             session.save()
-            for player in form.cleaned_data["players"]:
-                SessionPlayer.objects.create(session=session, player=player)
+            selected_players = form.cleaned_data["players"]
+            random_players = selected_players.order_by('?') 
+            for player in random_players:
+                SessionPlayer.objects.create(session=session, player=player)            
             return redirect("scoring", pk=session.pk)
     else:
         form = SessionCreateForm(initial={
@@ -145,6 +218,95 @@ def session_create(request):
 
 
 @login_required
+def ai_import(request):
+    if request.method == "POST":
+        form = AIScoreImportForm(request.POST)
+        if form.is_valid():
+            payload = form.cleaned_data["parsed_payload"]
+            course_name = payload["course"]
+            imported_players = payload["players"]
+
+            course = Course.objects.filter(name__iexact=course_name).first()
+            if not course:
+                form.add_error(
+                    "chatgpt_output",
+                    f"Course '{course_name}' does not exist. Please create it first.",
+                )
+            else:
+                holes = list(course.holes.order_by("hole_number")[:18])
+                if len(holes) != 18:
+                    form.add_error(
+                        "chatgpt_output",
+                        f"Course '{course.name}' must have exactly 18 holes.",
+                    )
+                else:
+                    resolved_players = []
+                    missing_players = []
+                    for player_data in imported_players:
+                        player = Player.objects.filter(name__iexact=player_data["name"]).first()
+                        if player is None:
+                            missing_players.append(player_data["name"])
+                        else:
+                            resolved_players.append((player, player_data["scores"]))
+
+                    if missing_players:
+                        form.add_error(
+                            "chatgpt_output",
+                            "Players do not exist: " + ", ".join(missing_players),
+                        )
+                    else:
+                        with transaction.atomic():
+                            session = Session.objects.create(
+                                course=course,
+                                played_at=payload["date"],
+                                season=payload["date"].year,
+                                status=Session.Status.COMPLETED,
+                                notes="Created via AI Score Import",
+                                created_by=request.user,
+                            )
+
+                            SessionPlayer.objects.bulk_create(
+                                [
+                                    SessionPlayer(session=session, player=player)
+                                    for player, _ in resolved_players
+                                ]
+                            )
+
+                            score_rows = []
+                            for player, scores in resolved_players:
+                                for index, strokes in enumerate(scores):
+                                    score_rows.append(
+                                        Score(
+                                            session=session,
+                                            player=player,
+                                            hole=holes[index],
+                                            strokes=strokes,
+                                        )
+                                    )
+                            Score.objects.bulk_create(score_rows)
+
+                        messages.success(
+                            request,
+                            f"Game imported successfully for {course.name} ({session.played_at}).",
+                        )
+                        return redirect("session_detail", pk=session.pk)
+    else:
+        form = AIScoreImportForm()
+
+    existing_players = Player.objects.filter(active=True).order_by("name")
+
+    return render(
+        request,
+        "core/ai_import.html",
+        {
+            "form": form,
+            "chatgpt_prompt": AI_SCORE_IMPORT_PROMPT,
+            "existing_players": existing_players,
+        },
+    )
+
+
+@login_required
 def session_detail(request, pk):
     session = get_object_or_404(
         Session.objects.select_related("course").prefetch_related("players", "scores__hole", "scores__player"),
@@ -152,6 +314,7 @@ def session_detail(request, pk):
     )
     holes = session.course.holes.order_by("hole_number")
     players = session.players.all()
+    totalPar = sum(h.par for h in holes)
 
     # Build score grid: {player_id: {hole_id: strokes}}
     score_map = {}
@@ -177,8 +340,14 @@ def session_detail(request, pk):
         "session": session,
         "holes": holes,
         "player_data": player_data,
+        "totalPar": totalPar,
     })
 
+@login_required
+def logout(request):
+    from django.contrib.auth import logout as auth_logout
+    auth_logout(request)
+    return redirect("login")
 
 @login_required
 @require_POST
@@ -199,7 +368,8 @@ def scoring(request, pk):
         pk=pk,
     )
     holes = session.course.holes.order_by("hole_number")
-    players = session.players.all()
+    players = session.players.all().order_by('sessionplayer__id')
+    totalPar = sum(h.par for h in holes)
     existing_scores = {
         (s.player_id, s.hole_id): s.strokes
         for s in session.scores.all()
@@ -214,6 +384,7 @@ def scoring(request, pk):
         "players": players,
         "existing_scores": existing_scores,
         "existing_scores_json": scores_json,
+        "totalPar": totalPar,
     })
 
 
