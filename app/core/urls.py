@@ -1,4 +1,4 @@
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView
 from django.urls import path
 
 from . import views
@@ -9,7 +9,7 @@ urlpatterns = [
     # Auth
     path("login/", LoginView.as_view(template_name="core/login.html"), name="login"),
     path("logout/", views.logout, name="logout"),
-    path('signup/', views.signup, name='signup'),
+    path("signup/", views.signup, name="signup"),
     # Dashboard
     path("", views.dashboard, name="dashboard"),
     # Players
@@ -32,5 +32,5 @@ urlpatterns = [
     path("sessions/<int:session_pk>/score/", views.score_save, name="score_save"),
     # Stats
     path("stats/", views.stats_overview, name="stats"),
-    path("leaderboard/", views.leaderboard, name="leaderboard")
+    path("leaderboard/", views.leaderboard, name="leaderboard"),
 ]
