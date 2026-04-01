@@ -1,7 +1,8 @@
+import json
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.dateparse import parse_date
-import json
 
 from .models import Course, Player, Session
 
@@ -19,11 +20,14 @@ class CourseForm(forms.ModelForm):
 
     def clean_holes_count(self):
         val = self.cleaned_data["holes_count"]
-        if self.instance.pk and self.instance.holes_count != val:
-            if self.instance.sessions.exists():
-                raise ValidationError(
-                    "Bahnanzahl kann nicht geändert werden, wenn bereits Spieltage existieren."
-                )
+        if (
+            self.instance.pk
+            and self.instance.holes_count != val
+            and self.instance.sessions.exists()
+        ):
+            raise ValidationError(
+                "Bahnanzahl kann nicht geändert werden, wenn bereits Spieltage existieren."
+            )
         return val
 
 
@@ -66,7 +70,7 @@ class AIScoreImportForm(forms.Form):
         try:
             payload = json.loads(normalized)
         except json.JSONDecodeError as exc:
-            raise ValidationError(f"Invalid JSON: {exc.msg}")
+            raise ValidationError(f"Invalid JSON: {exc.msg}") from exc
 
         if not isinstance(payload, dict):
             raise ValidationError("JSON root must be an object.")
