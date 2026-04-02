@@ -4,7 +4,6 @@ from django.db.models import Min
 
 from .models import Hole, Player, Score, Session, SessionPlayer
 
-
 BEST_PLAYER_NAME = "Best"
 
 

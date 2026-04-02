@@ -1,4 +1,4 @@
-from django.core.exceptions import ValidationError
+from django.db.utils import IntegrityError
 from django.test import TestCase
 
 from core.models import Course, Hole, Player, Score, Session, SessionPlayer
@@ -12,7 +12,7 @@ class PlayerModelTest(TestCase):
 
     def test_unique_name(self):
         Player.objects.create(name="Unique")
-        with self.assertRaises(Exception):
+        with self.assertRaises(IntegrityError):
             Player.objects.create(name="Unique")
 
 
@@ -34,7 +34,7 @@ class HoleModelTest(TestCase):
     def test_unique_together(self):
         course = Course.objects.create(name="Test", holes_count=1)
         # Hole 1 already created by Course.save()
-        with self.assertRaises(Exception):
+        with self.assertRaises(IntegrityError):
             Hole.objects.create(course=course, hole_number=1)
 
 
@@ -42,31 +42,21 @@ class ScoreModelTest(TestCase):
     def setUp(self):
         self.player = Player.objects.create(name="Scorer")
         self.course = Course.objects.create(name="ScoreCourse", holes_count=3)
-        self.session = Session.objects.create(
-            course=self.course, played_at="2026-01-01", season=2026
-        )
+        self.session = Session.objects.create(course=self.course, played_at="2026-01-01", season=2026)
         SessionPlayer.objects.create(session=self.session, player=self.player)
 
     def test_create_score(self):
         hole = self.course.holes.first()
-        score = Score.objects.create(
-            session=self.session, player=self.player, hole=hole, strokes=3
-        )
+        score = Score.objects.create(session=self.session, player=self.player, hole=hole, strokes=3)
         self.assertEqual(score.strokes, 3)
 
     def test_unique_constraint(self):
         hole = self.course.holes.first()
-        Score.objects.create(
-            session=self.session, player=self.player, hole=hole, strokes=2
-        )
-        with self.assertRaises(Exception):
-            Score.objects.create(
-                session=self.session, player=self.player, hole=hole, strokes=4
-            )
+        Score.objects.create(session=self.session, player=self.player, hole=hole, strokes=2)
+        with self.assertRaises(IntegrityError):
+            Score.objects.create(session=self.session, player=self.player, hole=hole, strokes=4)
 
     def test_total_strokes(self):
         for hole in self.course.holes.all():
-            Score.objects.create(
-                session=self.session, player=self.player, hole=hole, strokes=3
-            )
+            Score.objects.create(session=self.session, player=self.player, hole=hole, strokes=3)
         self.assertEqual(self.session.total_strokes(self.player), 9)

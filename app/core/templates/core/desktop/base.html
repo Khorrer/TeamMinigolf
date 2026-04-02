@@ -19,6 +19,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'css/core/img/favicon-32x32.png' %}">
   <link rel="icon" type="image/png" sizes="96x96" href="{% static 'css/core/img/favicon-96x96.png' %}">
   <link rel="icon" type="image/png" sizes="16x16" href="{% static 'css/core/img/favicon-16x16.png' %}">
+  <link rel="shortcut icon" href="{% static 'css/core/img/favicon.ico' %}">
   
   <link rel="manifest" href="{% static 'css/core/img/manifest.json' %}">
   <meta name="msapplication-TileColor" content="#ffffff">
@@ -36,7 +37,10 @@
   <nav class="navbar navbar-expand navbar-dark bg-success">
     <div class="container-fluid">
       <a class="navbar-brand" href="{% url 'dashboard' %}">
-        <i class="bi bi-flag-fill"></i> #TeamMinigolf
+        <span class="brand-mark">
+          <img src="{% static 'css/core/img/GOLF_LOGO.png' %}" alt="TeamMinigolf Logo" class="brand-logo" width="28" height="28">
+          <span>#TeamMinigolf</span>
+        </span>
       </a>
       <div class="navbar-collapse">
         {% if not request.mobile %}

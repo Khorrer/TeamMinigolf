@@ -1,25 +1,20 @@
 import json
-import random
 from datetime import date
 
+from django.contrib import messages
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
 from django.db import transaction
 from django.db.models import Avg, Count, Min, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
-from django.contrib import messages
-from .models import Course
-from django.db import models 
-from django.shortcuts import render, redirect
-from django.contrib.auth import login
-from django.contrib.auth.forms import UserCreationForm
 
 from .best_player import BEST_PLAYER_NAME, ensure_best_player_in_session, recompute_best_scores_for_session
 from .forms import AIScoreImportForm, CourseForm, PlayerForm, SessionCreateForm
 from .leaderboard_metrics import build_leaderboard_metrics, build_player_profile_stats
 from .models import AuditLog, Course, Hole, Player, Score, Session, SessionPlayer
-
 
 AI_SCORE_IMPORT_PROMPT = """You are helping to digitize a minigolf scorecard.
 
@@ -49,7 +44,7 @@ Rules:
 * do not add explanations
 * output JSON only
 * try to match course name to existing courses in our system, but if not sure, just return the name as it appears on the scorecard
-* existing courses: 
+* existing courses:
     - Gartengolfanlage Eppelheim
 * try to match player names to existing players in our system, but if not sure, just return the name as it appears on the scorecard
 * existing Players: """
@@ -61,26 +56,29 @@ Rules:
 def health_check(request):
     return HttpResponse("ok")
 
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
+
 
 class BootstrapSignUpForm(UserCreationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            field.widget.attrs.update({'class': 'form-control'})
+            field.widget.attrs.update({"class": "form-control"})
+
 
 def signup(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = BootstrapSignUpForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect('session_list') # Leitet zur Übersicht weiter
+            return redirect("session_list")  # Leitet zur Übersicht weiter
     else:
         form = BootstrapSignUpForm()
-    return render(request, 'core/signup.html', {'form': form})
+    return render(request, "core/signup.html", {"form": form})
 
 
 # ---------------------------------------------------------------------------
@@ -89,18 +87,19 @@ def signup(request):
 @login_required
 def dashboard(request):
     live_sessions = Session.objects.filter(status=Session.Status.LIVE).select_related("course")[:5]
-    recent_sessions = (
-        Session.objects.filter(status=Session.Status.COMPLETED)
-        .select_related("course")[:5]
-    )
+    recent_sessions = Session.objects.filter(status=Session.Status.COMPLETED).select_related("course")[:5]
     player_count = Player.objects.filter(active=True).count()
     course_count = Course.objects.count()
-    return render(request, "core/dashboard.html", {
-        "live_sessions": live_sessions,
-        "recent_sessions": recent_sessions,
-        "player_count": player_count,
-        "course_count": course_count,
-    })
+    return render(
+        request,
+        "core/dashboard.html",
+        {
+            "live_sessions": live_sessions,
+            "recent_sessions": recent_sessions,
+            "player_count": player_count,
+            "course_count": course_count,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +144,7 @@ def course_list(request):
     courses = Course.objects.annotate(session_count=Count("sessions"))
     return render(request, "core/course_list.html", {"courses": courses})
 
+
 @login_required
 def course_create(request):
     form = CourseForm(request.POST or None)
@@ -166,19 +166,17 @@ def course_edit(request, pk):
     course = get_object_or_404(Course.objects.prefetch_related("holes"), pk=pk)
     # Hole alle existierenden Bahnen oder erstelle sie, falls nötig
     holes = course.holes.annotate(avg_strokes=Avg("scores__strokes"))
-    
+
     if request.method == "POST":
         for hole in holes:
-            par_value = request.POST.get(f'par_{hole.hole_number}')
+            par_value = request.POST.get(f"par_{hole.hole_number}")
             if par_value:
                 hole.par = par_value
                 hole.save()
-        return redirect('course_list')
+        return redirect("course_list")
 
-    return render(request, 'core/course_pars.html', {
-        'course': course,
-        'holes': holes
-    })
+    return render(request, "core/course_pars.html", {"course": course, "holes": holes})
+
 
 # ---------------------------------------------------------------------------
 # Sessions
@@ -193,12 +191,16 @@ def session_list(request):
     if season_filter and season_filter.isdigit():
         sessions = sessions.filter(season=int(season_filter))
     seasons = Session.objects.values_list("season", flat=True).distinct().order_by("-season")
-    return render(request, "core/session_list.html", {
-        "sessions": sessions,
-        "seasons": seasons,
-        "current_status": status_filter,
-        "current_season": season_filter,
-    })
+    return render(
+        request,
+        "core/session_list.html",
+        {
+            "sessions": sessions,
+            "seasons": seasons,
+            "current_status": status_filter,
+            "current_season": season_filter,
+        },
+    )
 
 
 @login_required
@@ -210,16 +212,18 @@ def session_create(request):
             session.created_by = request.user
             session.save()
             selected_players = form.cleaned_data["players"]
-            random_players = selected_players.order_by('?') 
+            random_players = selected_players.order_by("?")
             for player in random_players:
                 SessionPlayer.objects.create(session=session, player=player)
             ensure_best_player_in_session(session)
             return redirect("scoring", pk=session.pk)
     else:
-        form = SessionCreateForm(initial={
-            "played_at": date.today(),
-            "season": date.today().year,
-        })
+        form = SessionCreateForm(
+            initial={
+                "played_at": date.today(),
+                "season": date.today().year,
+            }
+        )
     return render(request, "core/session_create.html", {"form": form})
 
 
@@ -272,10 +276,7 @@ def ai_import(request):
                             )
 
                             SessionPlayer.objects.bulk_create(
-                                [
-                                    SessionPlayer(session=session, player=player)
-                                    for player, _ in resolved_players
-                                ]
+                                [SessionPlayer(session=session, player=player) for player, _ in resolved_players]
                             )
 
                             ensure_best_player_in_session(session)
@@ -302,11 +303,7 @@ def ai_import(request):
     else:
         form = AIScoreImportForm()
 
-    existing_players = (
-        Player.objects.filter(active=True)
-        .exclude(name__iexact=BEST_PLAYER_NAME)
-        .order_by("name")
-    )
+    existing_players = Player.objects.filter(active=True).exclude(name__iexact=BEST_PLAYER_NAME).order_by("name")
 
     return render(
         request,
@@ -348,24 +345,33 @@ def session_detail(request, pk):
             scores_for_player.append(s)
             if s:
                 total += s
-        player_data.append({
-            "player": player,
-            "scores": scores_for_player,
-            "total": total,
-        })
+        player_data.append(
+            {
+                "player": player,
+                "scores": scores_for_player,
+                "total": total,
+            }
+        )
 
-    return render(request, "core/session_detail.html", {
-        "session": session,
-        "holes": holes,
-        "player_data": player_data,
-        "totalPar": totalPar,
-    })
+    return render(
+        request,
+        "core/session_detail.html",
+        {
+            "session": session,
+            "holes": holes,
+            "player_data": player_data,
+            "totalPar": totalPar,
+        },
+    )
+
 
 @login_required
 def logout(request):
     from django.contrib.auth import logout as auth_logout
+
     auth_logout(request)
     return redirect("login")
+
 
 @login_required
 @require_POST
@@ -387,12 +393,9 @@ def scoring(request, pk):
     )
     best_player = recompute_best_scores_for_session(session)
     holes = session.course.holes.order_by("hole_number")
-    players = session.players.exclude(pk=best_player.pk).all().order_by('sessionplayer__id')
+    players = session.players.exclude(pk=best_player.pk).all().order_by("sessionplayer__id")
     totalPar = sum((h.par or 0) for h in holes)
-    existing_scores = {
-        (s.player_id, s.hole_id): s.strokes
-        for s in session.scores.all()
-    }
+    existing_scores = {(s.player_id, s.hole_id): s.strokes for s in session.scores.all()}
     best_scores = [
         {
             "hole_id": h.id,
@@ -402,19 +405,21 @@ def scoring(request, pk):
     ]
     best_total = sum((item["strokes"] or 0) for item in best_scores)
     # JSON-serializable version for JavaScript: {"playerId_holeId": strokes}
-    scores_json = json.dumps({
-        f"{pid}_{hid}": strokes for (pid, hid), strokes in existing_scores.items()
-    })
-    return render(request, "core/scoring.html", {
-        "session": session,
-        "holes": holes,
-        "players": players,
-        "existing_scores": existing_scores,
-        "existing_scores_json": scores_json,
-        "totalPar": totalPar,
-        "best_scores": best_scores,
-        "best_total": best_total,
-    })
+    scores_json = json.dumps({f"{pid}_{hid}": strokes for (pid, hid), strokes in existing_scores.items()})
+    return render(
+        request,
+        "core/scoring.html",
+        {
+            "session": session,
+            "holes": holes,
+            "players": players,
+            "existing_scores": existing_scores,
+            "existing_scores_json": scores_json,
+            "totalPar": totalPar,
+            "best_scores": best_scores,
+            "best_total": best_total,
+        },
+    )
 
 
 @login_required
@@ -454,9 +459,7 @@ def score_save(request, session_pk):
 
     if strokes is None or strokes == "":
         # Delete score if exists
-        deleted, _ = Score.objects.filter(
-            session=session, player_id=player_id, hole_id=hole_id
-        ).delete()
+        deleted, _ = Score.objects.filter(session=session, player_id=player_id, hole_id=hole_id).delete()
         if deleted:
             AuditLog.objects.create(
                 user=request.user,
@@ -476,11 +479,13 @@ def score_save(request, session_pk):
             .first()
         )
         best_total = session.scores.filter(player=best_player).aggregate(t=Sum("strokes"))["t"] or 0
-        return JsonResponse({
-            "status": "deleted",
-            "best_hole_strokes": best_hole_strokes,
-            "best_total": best_total,
-        })
+        return JsonResponse(
+            {
+                "status": "deleted",
+                "best_hole_strokes": best_hole_strokes,
+                "best_total": best_total,
+            }
+        )
 
     strokes = int(strokes)
     if strokes < 1 or strokes > 10:
@@ -513,12 +518,14 @@ def score_save(request, session_pk):
         .first()
     )
     best_total = session.scores.filter(player=best_player).aggregate(t=Sum("strokes"))["t"] or 0
-    return JsonResponse({
-        "status": "saved",
-        "total": total,
-        "best_hole_strokes": best_hole_strokes,
-        "best_total": best_total,
-    })
+    return JsonResponse(
+        {
+            "status": "saved",
+            "total": total,
+            "best_hole_strokes": best_hole_strokes,
+            "best_total": best_total,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -560,14 +567,18 @@ def stats_overview(request):
     seasons = Session.objects.values_list("season", flat=True).distinct().order_by("-season")
     courses = Course.objects.all()
 
-    return render(request, "core/stats.html", {
-        "player_stats": player_stats,
-        "hole_stats": hole_stats,
-        "seasons": seasons,
-        "courses": courses,
-        "current_season": season,
-        "current_course": course_id,
-    })
+    return render(
+        request,
+        "core/stats.html",
+        {
+            "player_stats": player_stats,
+            "hole_stats": hole_stats,
+            "seasons": seasons,
+            "courses": courses,
+            "current_season": season,
+            "current_course": course_id,
+        },
+    )
 
 
 @login_required
@@ -579,11 +590,15 @@ def leaderboard(request):
 
     seasons = Session.objects.values_list("season", flat=True).distinct().order_by("-season")
 
-    return render(request, "core/leaderboard.html", {
-        "leaderboard_metrics": leaderboard_metrics,
-        "seasons": seasons,
-        "current_season": season_raw,
-    })
+    return render(
+        request,
+        "core/leaderboard.html",
+        {
+            "leaderboard_metrics": leaderboard_metrics,
+            "seasons": seasons,
+            "current_season": season_raw,
+        },
+    )
 
 
 @login_required
