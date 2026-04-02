@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from statistics import mean
 
-from django.db.models import Avg, Count, Min, Q, Sum
+from django.db.models import Avg, Count, Sum
 
 from .best_player import BEST_PLAYER_NAME
 from .models import Player, Score

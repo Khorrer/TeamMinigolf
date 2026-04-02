@@ -1,7 +1,7 @@
 import json
 
 from django.contrib.auth.models import User
-from django.test import Client, TestCase
+from django.test import TestCase
 from django.urls import reverse
 
 from core.models import Course, Player, Score, Session, SessionPlayer
