@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Seed example data for development."""
+
 import os
 import sys
 from datetime import date

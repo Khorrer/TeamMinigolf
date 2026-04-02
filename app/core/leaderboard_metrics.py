@@ -69,12 +69,7 @@ def build_leaderboard_metrics(season: int | None = None) -> list[dict]:
         if row["round_total"] == best_total_by_session[row["session_id"]]:
             wins_by_player[row["player_id"]] += 1
 
-    hio_rows = (
-        _base_score_queryset(season)
-        .filter(strokes=1)
-        .values("player_id")
-        .annotate(count=Count("id"))
-    )
+    hio_rows = _base_score_queryset(season).filter(strokes=1).values("player_id").annotate(count=Count("id"))
     hio_by_player = {row["player_id"]: row["count"] for row in hio_rows}
 
     metrics = {
@@ -175,10 +170,7 @@ def build_player_profile_stats(player: Player, season: int | None = None) -> dic
         if 1 <= row["strokes"] <= 7:
             distribution_counts[row["strokes"]] = row["count"]
 
-    hole_avgs = list(
-        score_qs.values("hole__hole_number")
-        .annotate(avg_strokes=Avg("strokes"), count=Count("id"))
-    )
+    hole_avgs = list(score_qs.values("hole__hole_number").annotate(avg_strokes=Avg("strokes"), count=Count("id")))
 
     best_hole = None
     worst_hole = None

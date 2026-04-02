@@ -15,9 +15,7 @@ class PlayerForm(forms.ModelForm):
     def clean_name(self):
         name = self.cleaned_data["name"]
         if is_best_player_name(name):
-            raise ValidationError(
-                f"'{BEST_PLAYER_NAME}' ist reserviert und wird automatisch verwaltet."
-            )
+            raise ValidationError(f"'{BEST_PLAYER_NAME}' ist reserviert und wird automatisch verwaltet.")
         return name
 
 
@@ -30,9 +28,7 @@ class CourseForm(forms.ModelForm):
         val = self.cleaned_data["holes_count"]
         if self.instance.pk and self.instance.holes_count != val:
             if self.instance.sessions.exists():
-                raise ValidationError(
-                    "Bahnanzahl kann nicht geändert werden, wenn bereits Spieltage existieren."
-                )
+                raise ValidationError("Bahnanzahl kann nicht geändert werden, wenn bereits Spieltage existieren.")
         return val
 
 
@@ -83,9 +79,7 @@ class AIScoreImportForm(forms.Form):
         required_fields = ["course", "date", "players"]
         missing_fields = [field for field in required_fields if field not in payload]
         if missing_fields:
-            raise ValidationError(
-                f"Missing required fields: {', '.join(missing_fields)}."
-            )
+            raise ValidationError(f"Missing required fields: {', '.join(missing_fields)}.")
 
         course_name = payload.get("course")
         if not isinstance(course_name, str) or not course_name.strip():
@@ -120,16 +114,12 @@ class AIScoreImportForm(forms.Form):
                 raise ValidationError(f"Player '{normalized_name}': 'scores' must be a list.")
 
             if len(scores) != 18:
-                raise ValidationError(
-                    f"Player '{normalized_name}' must have exactly 18 scores."
-                )
+                raise ValidationError(f"Player '{normalized_name}' must have exactly 18 scores.")
 
             parsed_scores = []
             for hole_number, score in enumerate(scores, start=1):
                 if not isinstance(score, int) or isinstance(score, bool):
-                    raise ValidationError(
-                        f"Player '{normalized_name}' hole {hole_number}: score must be a number."
-                    )
+                    raise ValidationError(f"Player '{normalized_name}' hole {hole_number}: score must be a number.")
                 if score < 1 or score > 7:
                     raise ValidationError(
                         f"Player '{normalized_name}' hole {hole_number}: score must be between 1 and 7."
