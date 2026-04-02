@@ -6,14 +6,13 @@ import sys
 from datetime import date
 
 import django
+from django.contrib.auth.models import User  # noqa: E402
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "app"))
 django.setup()
 
-from django.contrib.auth.models import User  # noqa: E402
-
-from core.models import Course, Hole, Player, Score, Session, SessionPlayer  # noqa: E402
+from core.models import Course, Player, Score, Session, SessionPlayer  # noqa: E402
 
 print("Seeding data...")
 

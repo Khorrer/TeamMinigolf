@@ -1,25 +1,20 @@
 import json
-import random
 from datetime import date
 
+from django.contrib import messages
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
 from django.db import transaction
 from django.db.models import Avg, Count, Min, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
-from django.contrib import messages
-from .models import Course
-from django.db import models
-from django.shortcuts import render, redirect
-from django.contrib.auth import login
-from django.contrib.auth.forms import UserCreationForm
 
 from .best_player import BEST_PLAYER_NAME, ensure_best_player_in_session, recompute_best_scores_for_session
 from .forms import AIScoreImportForm, CourseForm, PlayerForm, SessionCreateForm
 from .leaderboard_metrics import build_leaderboard_metrics, build_player_profile_stats
 from .models import AuditLog, Course, Hole, Player, Score, Session, SessionPlayer
-
 
 AI_SCORE_IMPORT_PROMPT = """You are helping to digitize a minigolf scorecard.
 
@@ -49,7 +44,7 @@ Rules:
 * do not add explanations
 * output JSON only
 * try to match course name to existing courses in our system, but if not sure, just return the name as it appears on the scorecard
-* existing courses: 
+* existing courses:
     - Gartengolfanlage Eppelheim
 * try to match player names to existing players in our system, but if not sure, just return the name as it appears on the scorecard
 * existing Players: """
