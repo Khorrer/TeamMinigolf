@@ -1,7 +1,14 @@
+{% load static %}
+
 <header class="mobile-page-header">
   <div class="mobile-page-header__top">
     <div>
-      <h1 class="mobile-page-header__title">{{ title|default:"#TeamMinigolf" }}</h1>
+      <h1 class="mobile-page-header__title">
+        <span class="mobile-page-header__brand">
+          <img src="{% static 'css/core/img/GOLF_LOGO.png' %}" alt="TeamMinigolf Logo" class="mobile-page-header__logo" width="26" height="26">
+          <span>{{ title|default:"#TeamMinigolf" }}</span>
+        </span>
+      </h1>
       {% if subtitle %}
         <p class="mobile-page-header__subtitle">{{ subtitle }}</p>
       {% endif %}
@@ -44,6 +51,18 @@
     letter-spacing: -0.3px;
     line-height: 1.15;
     font-weight: 700;
+  }
+
+  .mobile-page-header__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-page-header__logo {
+    border-radius: 6px;
+    object-fit: cover;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
   }
 
   .mobile-page-header__subtitle {

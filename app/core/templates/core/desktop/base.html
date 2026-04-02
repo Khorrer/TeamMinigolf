@@ -36,7 +36,10 @@
   <nav class="navbar navbar-expand navbar-dark bg-success">
     <div class="container-fluid">
       <a class="navbar-brand" href="{% url 'dashboard' %}">
-        <i class="bi bi-flag-fill"></i> #TeamMinigolf
+        <span class="brand-mark">
+          <img src="{% static 'css/core/img/GOLF_LOGO.png' %}" alt="TeamMinigolf Logo" class="brand-logo" width="28" height="28">
+          <span>#TeamMinigolf</span>
+        </span>
       </a>
       <div class="navbar-collapse">
         {% if not request.mobile %}
