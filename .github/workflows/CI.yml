@@ -37,11 +37,12 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+          cache-dependency-path: app/requirements.txt
 
       - name: Abhängigkeiten installieren
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          python -m pip install -r requirements.txt
+          python -m pip install -r app/requirements.txt
           python -m pip install ruff pip-audit
 
       - name: Ruff Format-Check
@@ -51,7 +52,7 @@ jobs:
         run: python -m ruff check .
 
       - name: Security-Scan Python-Abhängigkeiten
-        run: python -m pip-audit -r requirements.txt
+        run: python -m pip_audit -r app/requirements.txt
 
   docker-smoke-test:
     name: Docker Smoke-Test + Django Tests
