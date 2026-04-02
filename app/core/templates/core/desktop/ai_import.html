@@ -2,7 +2,16 @@
 {% block title %}AI Score Import – #TeamMinigolf{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">AI Score Import</h2>
+<div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+  <div>
+    <h2 class="mb-1">AI Score Import</h2>
+    <p class="text-muted mb-0">Importiere einen Spieltag aus einem ChatGPT-JSON.</p>
+  </div>
+  <div class="btn-group" role="group" aria-label="Spieltag Modus">
+    <a href="{% url 'session_create' %}" class="btn btn-outline-success">Standard</a>
+    <a href="{% url 'ai_import' %}" class="btn btn-success active" aria-current="page">KI Import</a>
+  </div>
+</div>
 
 <form method="post" novalidate>
   {% csrf_token %}

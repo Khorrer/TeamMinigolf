@@ -30,6 +30,25 @@ class DashboardTest(TestCase):
         self.assertContains(response, "#TeamMinigolf")
 
 
+class SessionCreateChoiceTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("testuser", password="testpass123")
+        self.client.login(username="testuser", password="testpass123")
+
+    def test_session_create_page_offers_ai_import(self):
+        response = self.client.get(reverse("session_create"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Standard")
+        self.assertContains(response, "KI Import")
+        self.assertContains(response, reverse("ai_import"))
+
+    def test_ai_import_page_offers_standard_flow(self):
+        response = self.client.get(reverse("ai_import"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI Score Import")
+        self.assertContains(response, reverse("session_create"))
+
+
 class PlayerViewTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("testuser", password="testpass123")

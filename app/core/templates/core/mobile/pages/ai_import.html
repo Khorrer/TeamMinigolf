@@ -1,0 +1,77 @@
+{% extends "core/mobile/base_mobile.html" %}
+{% load widget_tweaks %}
+
+{% block title %}AI Score Import | #TeamMinigolf{% endblock %}
+
+{% block mobile_header %}
+  {% include "core/mobile/components/_header.html" with title="AI Score Import" subtitle="Spieltag aus JSON importieren" %}
+{% endblock %}
+
+{% block content %}
+  <section class="mobile-card">
+    <p class="mobile-label">Modus wählen</p>
+    <p class="mobile-muted">Zwischen klassischer Eingabe und KI-Import wechseln.</p>
+    <div class="d-flex flex-column gap-2">
+      <a href="{% url 'session_create' %}" class="mobile-secondary-btn"><i class="bi bi-pencil-square"></i> Standard</a>
+      <a href="{% url 'ai_import' %}" class="mobile-primary-btn" aria-current="page"><i class="bi bi-robot"></i> KI Import</a>
+    </div>
+  </section>
+
+  <form method="post" novalidate class="mobile-form">
+    {% csrf_token %}
+
+    <article class="mobile-card">
+      <h2>1. ChatGPT Prompt</h2>
+      <p class="mobile-muted">Kopiere den Prompt, lass das Bild auslesen und füge das JSON unten ein.</p>
+      <textarea id="chatgptPrompt" class="mobile-input" rows="14" readonly>{{ chatgpt_prompt }}
+{% for player in existing_players %}- {{ player.name }}
+{% empty %}- no existing players
+{% endfor %}</textarea>
+      <div class="d-grid gap-2 mt-3">
+        <button type="button" id="copyPromptButton" class="mobile-primary-btn"><i class="bi bi-clipboard"></i> Prompt kopieren</button>
+        <a href="https://chat.openai.com" target="_blank" rel="noopener noreferrer" class="mobile-secondary-btn"><i class="bi bi-box-arrow-up-right"></i> ChatGPT öffnen</a>
+      </div>
+    </article>
+
+    <article class="mobile-card">
+      <h2>2. ChatGPT Output</h2>
+      <label for="{{ form.chatgpt_output.id_for_label }}" class="mobile-label">{{ form.chatgpt_output.label }}</label>
+      {% render_field form.chatgpt_output class="mobile-input" %}
+      {% for error in form.chatgpt_output.errors %}
+        <p class="mobile-muted">{{ error }}</p>
+      {% endfor %}
+      {% for error in form.non_field_errors %}
+        <p class="mobile-muted">{{ error }}</p>
+      {% endfor %}
+    </article>
+
+    <article class="mobile-card">
+      <h2>3. Spieltag anlegen</h2>
+      <p class="mobile-muted">JSON validieren, Spieler auflösen und Spielstand speichern.</p>
+      <button type="submit" class="mobile-primary-btn"><i class="bi bi-check2-circle"></i> Spieltag importieren</button>
+    </article>
+  </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    var copyButton = document.getElementById("copyPromptButton");
+    var promptField = document.getElementById("chatgptPrompt");
+
+    if (!copyButton || !promptField) {
+      return;
+    }
+
+    copyButton.addEventListener("click", function () {
+      navigator.clipboard.writeText(promptField.value).then(function () {
+        var previousText = copyButton.textContent;
+        copyButton.textContent = "Kopiert";
+        setTimeout(function () {
+          copyButton.textContent = previousText;
+        }, 1200);
+      });
+    });
+  })();
+</script>
+{% endblock %}
