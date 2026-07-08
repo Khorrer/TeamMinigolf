@@ -1,7 +1,7 @@
 import json
 
 from django.contrib.auth.models import User
-from django.test import Client, TestCase
+from django.test import TestCase
 from django.urls import reverse
 
 from core.models import Course, Player, Score, Session, SessionPlayer
@@ -30,6 +30,25 @@ class DashboardTest(TestCase):
         self.assertContains(response, "#TeamMinigolf")
 
 
+class SessionCreateChoiceTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("testuser", password="testpass123")
+        self.client.login(username="testuser", password="testpass123")
+
+    def test_session_create_page_offers_ai_import(self):
+        response = self.client.get(reverse("session_create"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Standard")
+        self.assertContains(response, "KI Import")
+        self.assertContains(response, reverse("ai_import"))
+
+    def test_ai_import_page_offers_standard_flow(self):
+        response = self.client.get(reverse("ai_import"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI Score Import")
+        self.assertContains(response, reverse("session_create"))
+
+
 class PlayerViewTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("testuser", password="testpass123")
@@ -53,9 +72,7 @@ class ScoringTest(TestCase):
         self.client.login(username="testuser", password="testpass123")
         self.player = Player.objects.create(name="Scorer")
         self.course = Course.objects.create(name="TestCourse", holes_count=3)
-        self.session = Session.objects.create(
-            course=self.course, played_at="2026-01-01", season=2026
-        )
+        self.session = Session.objects.create(course=self.course, played_at="2026-01-01", season=2026)
         SessionPlayer.objects.create(session=self.session, player=self.player)
 
     def test_scoring_page_loads(self):
@@ -66,11 +83,13 @@ class ScoringTest(TestCase):
         hole = self.course.holes.first()
         response = self.client.post(
             reverse("score_save", args=[self.session.pk]),
-            data=json.dumps({
-                "player_id": self.player.pk,
-                "hole_id": hole.pk,
-                "strokes": 3,
-            }),
+            data=json.dumps(
+                {
+                    "player_id": self.player.pk,
+                    "hole_id": hole.pk,
+                    "strokes": 3,
+                }
+            ),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
@@ -91,11 +110,13 @@ class ScoringTest(TestCase):
         other_player = Player.objects.create(name="Other")
         response = self.client.post(
             reverse("score_save", args=[self.session.pk]),
-            data=json.dumps({
-                "player_id": other_player.pk,
-                "hole_id": hole.pk,
-                "strokes": 3,
-            }),
+            data=json.dumps(
+                {
+                    "player_id": other_player.pk,
+                    "hole_id": hole.pk,
+                    "strokes": 3,
+                }
+            ),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 400)

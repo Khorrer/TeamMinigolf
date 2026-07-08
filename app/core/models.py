@@ -18,9 +18,7 @@ class Player(models.Model):
 class Course(models.Model):
     name = models.CharField(max_length=100)
     location = models.CharField(max_length=200, blank=True, default="")
-    holes_count = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(36)]
-    )
+    holes_count = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(36)])
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -34,9 +32,7 @@ class Course(models.Model):
         super().save(*args, **kwargs)
         if is_new:
             # Auto-create holes when a new course is saved
-            Hole.objects.bulk_create(
-                [Hole(course=self, hole_number=i) for i in range(1, self.holes_count + 1)]
-            )
+            Hole.objects.bulk_create([Hole(course=self, hole_number=i) for i in range(1, self.holes_count + 1)])
 
 
 class Hole(models.Model):
@@ -65,9 +61,7 @@ class Session(models.Model):
     notes = models.TextField(blank=True, default="")
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.LIVE)
     players = models.ManyToManyField(Player, through="SessionPlayer", related_name="sessions")
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
-    )
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -78,9 +72,7 @@ class Session(models.Model):
         return f"{self.course.name} – {self.played_at}"
 
     def total_strokes(self, player):
-        return (
-            self.scores.filter(player=player).aggregate(total=models.Sum("strokes"))["total"] or 0
-        )
+        return self.scores.filter(player=player).aggregate(total=models.Sum("strokes"))["total"] or 0
 
 
 class SessionPlayer(models.Model):
@@ -98,9 +90,7 @@ class Score(models.Model):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="scores")
     player = models.ForeignKey(Player, on_delete=models.PROTECT, related_name="scores")
     hole = models.ForeignKey(Hole, on_delete=models.PROTECT, related_name="scores")
-    strokes = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(10)]
-    )
+    strokes = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -117,9 +107,7 @@ class Score(models.Model):
 class AuditLog(models.Model):
     """Tracks changes to scores for accountability."""
 
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True
-    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=20)  # create, update, delete
     model_name = models.CharField(max_length=50)
     object_id = models.PositiveIntegerField()

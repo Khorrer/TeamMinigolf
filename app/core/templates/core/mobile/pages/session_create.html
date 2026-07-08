@@ -8,6 +8,15 @@
 {% endblock %}
 
 {% block content %}
+  <section class="mobile-card">
+    <p class="mobile-label">Modus wählen</p>
+    <p class="mobile-muted">Zwischen klassischer Eingabe und KI-Import wechseln.</p>
+    <div class="d-flex flex-column gap-2">
+      <a href="{% url 'session_create' %}" class="mobile-primary-btn" aria-current="page"><i class="bi bi-pencil-square"></i> Standard</a>
+      <a href="{% url 'ai_import' %}" class="mobile-secondary-btn"><i class="bi bi-robot"></i> KI Import</a>
+    </div>
+  </section>
+
   <form method="post" class="mobile-form">
     {% csrf_token %}
 

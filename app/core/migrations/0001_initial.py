@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -16,105 +15,179 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Course',
+            name="Course",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('location', models.CharField(blank=True, default='', max_length=200)),
-                ('holes_count', models.PositiveSmallIntegerField(validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(36)])),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=100)),
+                ("location", models.CharField(blank=True, default="", max_length=200)),
+                (
+                    "holes_count",
+                    models.PositiveSmallIntegerField(
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(36),
+                        ]
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Player',
+            name="Player",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('active', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=100, unique=True)),
+                ("active", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Hole',
+            name="Hole",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('hole_number', models.PositiveSmallIntegerField()),
-                ('par', models.PositiveSmallIntegerField(blank=True, null=True, validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(7)])),
-                ('course', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='holes', to='core.course')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("hole_number", models.PositiveSmallIntegerField()),
+                (
+                    "par",
+                    models.PositiveSmallIntegerField(
+                        blank=True,
+                        null=True,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(7),
+                        ],
+                    ),
+                ),
+                (
+                    "course",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="holes", to="core.course"
+                    ),
+                ),
             ],
             options={
-                'ordering': ['course', 'hole_number'],
-                'unique_together': {('course', 'hole_number')},
+                "ordering": ["course", "hole_number"],
+                "unique_together": {("course", "hole_number")},
             },
         ),
         migrations.CreateModel(
-            name='Session',
+            name="Session",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('played_at', models.DateField()),
-                ('season', models.PositiveSmallIntegerField(help_text='Jahr der Saison')),
-                ('notes', models.TextField(blank=True, default='')),
-                ('status', models.CharField(choices=[('live', 'Live'), ('completed', 'Abgeschlossen')], default='live', max_length=10)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('course', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='sessions', to='core.course')),
-                ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("played_at", models.DateField()),
+                ("season", models.PositiveSmallIntegerField(help_text="Jahr der Saison")),
+                ("notes", models.TextField(blank=True, default="")),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("live", "Live"), ("completed", "Abgeschlossen")], default="live", max_length=10
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "course",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT, related_name="sessions", to="core.course"
+                    ),
+                ),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-played_at', '-created_at'],
+                "ordering": ["-played_at", "-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='SessionPlayer',
+            name="SessionPlayer",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('player', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='core.player')),
-                ('session', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='session_players', to='core.session')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("player", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to="core.player")),
+                (
+                    "session",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="session_players", to="core.session"
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('session', 'player')},
+                "unique_together": {("session", "player")},
             },
         ),
         migrations.AddField(
-            model_name='session',
-            name='players',
-            field=models.ManyToManyField(related_name='sessions', through='core.SessionPlayer', to='core.player'),
+            model_name="session",
+            name="players",
+            field=models.ManyToManyField(related_name="sessions", through="core.SessionPlayer", to="core.player"),
         ),
         migrations.CreateModel(
-            name='AuditLog',
+            name="AuditLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('action', models.CharField(max_length=20)),
-                ('model_name', models.CharField(max_length=50)),
-                ('object_id', models.PositiveIntegerField()),
-                ('details', models.JSONField(default=dict)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("action", models.CharField(max_length=20)),
+                ("model_name", models.CharField(max_length=50)),
+                ("object_id", models.PositiveIntegerField()),
+                ("details", models.JSONField(default=dict)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created_at'],
-                'indexes': [models.Index(fields=['model_name', 'object_id'], name='core_auditl_model_n_3fb686_idx')],
+                "ordering": ["-created_at"],
+                "indexes": [models.Index(fields=["model_name", "object_id"], name="core_auditl_model_n_3fb686_idx")],
             },
         ),
         migrations.CreateModel(
-            name='Score',
+            name="Score",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('strokes', models.PositiveSmallIntegerField(validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(10)])),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('hole', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='scores', to='core.hole')),
-                ('player', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='scores', to='core.player')),
-                ('session', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='scores', to='core.session')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "strokes",
+                    models.PositiveSmallIntegerField(
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(10),
+                        ]
+                    ),
+                ),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "hole",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT, related_name="scores", to="core.hole"
+                    ),
+                ),
+                (
+                    "player",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT, related_name="scores", to="core.player"
+                    ),
+                ),
+                (
+                    "session",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="scores", to="core.session"
+                    ),
+                ),
             ],
             options={
-                'indexes': [models.Index(fields=['session', 'player'], name='core_score_session_96c54b_idx'), models.Index(fields=['hole'], name='core_score_hole_id_a3b3dc_idx')],
-                'unique_together': {('session', 'player', 'hole')},
+                "indexes": [
+                    models.Index(fields=["session", "player"], name="core_score_session_96c54b_idx"),
+                    models.Index(fields=["hole"], name="core_score_hole_id_a3b3dc_idx"),
+                ],
+                "unique_together": {("session", "player", "hole")},
             },
         ),
     ]
